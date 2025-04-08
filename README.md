@@ -1,7 +1,7 @@
 # n_cord
 A Nostr powered Discord &amp; IRC inspired client.
 
-Try it at [0n4t3.github.io/n_cord[(https://0n4t3.github.io/n_cord/)
+Try it at [0n4t3.github.io/n_cord](https://0n4t3.github.io/n_cord/)
 
 *This project is vibe coded, abanden all hope of stability ye who enter here.*
 
