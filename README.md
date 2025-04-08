@@ -1,6 +1,8 @@
 # n_cord
 A Nostr powered Discord &amp; IRC inspired client.
 
+Try it at [0n4t3.github.io/n_cord[(https://0n4t3.github.io/n_cord/)
+
 *This project is vibe coded, abanden all hope of stability ye who enter here.*
 
 I decided to give vibe coding a try, this is what I wound up with. Honestly it's not too bad all things considered, it's a Nostr client that has a chatroom style layout, allowing you to subscribe to "chatrooms" (hashtags) or just view your following in a chatroom style layout. You can sign in with a Nostr signing extension like Nos2x - which is HIGHLY recommended for account security given aforementioned vibe coding.
