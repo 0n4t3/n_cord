@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nostr Client - Discord Style</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @font-face {
+        font-family: 'LucideIcons';
+        src: url(https://cdn.jsdelivr.net/npm/lucide-static@latest/font/Lucide.ttf) format('truetype');
+      }
+      .lucide {
+        font-family: 'LucideIcons';
+        font-style: normal;
+        font-weight: normal;
+        font-variant: normal;
+        text-rendering: auto;
+        line-height: 1;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      /* Specific icon mappings (add more as needed) */
+      .lucide-settings:before { content: "\0ed4"; }
+      .lucide-log-out:before { content: "\0e34"; }
+      .lucide-alert-triangle:before { content: "\0cce"; }
+      .lucide-x-circle:before { content: "\0f38"; }
+      .lucide-check-circle:before { content: "\0d4a"; }
+      .lucide-loader-2:before { content: "\0e32"; }
+      .lucide-hash:before { content: "\0e04"; }
+      .lucide-globe:before { content: "\0df9"; }
+      .lucide-users:before { content: "\0f3b"; }
+      .lucide-wifi:before { content: "\0f31"; }
+      .lucide-wifi-off:before { content: "\0f32"; }
+      .lucide-plus:before { content: "\0ea0"; }
+      .lucide-trash-2:before { content: "\0f1b"; }
+      .lucide-chevron-down:before { content: "\0d56"; }
+      .lucide-send:before { content: "\0ec9"; }
+    </style>
+    <script src="https://unpkg.com/nostr-tools@1/lib/nostr.bundle.js"></script>
+    <style>
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #231b2e; }
+        ::-webkit-scrollbar-thumb { background: #120b1c; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0b0610; }
+
+        /* Basic styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0413; /* Very dark background */
+            color: #b9f155; /* Greenish text */
+        }
+
+        /* Message container styling */
+        .message {
+            border-left: 2px solid transparent;
+            transition: background-color 0.1s ease-in-out, border-left-color 0.1s ease-in-out;
+        }
+        .message:hover {
+            background-color: #1a0d27; /* Slightly lighter on hover */
+            border-left-color: #9147ff; /* Purple accent */
+        }
+
+        /* Placeholder image style */
+        .avatar {
+            background-color: #9147ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        /* Input area styling */
+        #messageInput, #privateKeyInput, #addHashtagInput {
+            background-color: #1a0d27;
+            color: #b9f155;
+            border-radius: 8px;
+            border: 1px solid #231b2e;
+        }
+        #messageInput::placeholder, #privateKeyInput::placeholder, #addHashtagInput::placeholder {
+            color: #6e548e;
+        }
+        #messageInput:focus, #privateKeyInput:focus, #addHashtagInput:focus {
+             outline: none;
+             border-color: #9147ff;
+             box-shadow: 0 0 0 2px rgba(145, 71, 255, 0.5);
+        }
+
+        /* Button styling */
+        button {
+            transition: background-color 0.2s ease;
+            border-radius: 8px;
+        }
+        .btn-primary {
+            background-color: #9147ff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #7e37d8;
+        }
+        .btn-secondary {
+            background-color: #3a3a3c;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #4a4a4c;
+        }
+        .btn-danger {
+            background-color: #ef4444; /* Red */
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626; /* Darker Red */
+        }
+
+
+        /* Modal styling */
+        .modal { background-color: rgba(0, 0, 0, 0.8); }
+        .modal-content { background-color: #120b1c; border-radius: 8px; }
+
+        /* Warning text style */
+        .warning-text {
+            color: #f7b903; font-size: 0.875rem;
+            background-color: rgba(247, 185, 3, 0.1);
+            border-left: 4px solid #f7b903; padding: 8px;
+            border-radius: 4px; margin-bottom: 1rem;
+        }
+
+        /* Sidebar channel styling */
+        .channel-item {
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: background-color 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px; /* space between icon and text */
+        }
+        .channel-item:hover {
+            background-color: #2a1d3a;
+        }
+        .channel-item.active {
+            background-color: #3f2b55;
+            color: #ffffff;
+            font-weight: 500;
+        }
+        .channel-item .lucide {
+            flex-shrink: 0; /* Prevent icon from shrinking */
+        }
+        .channel-item span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Dropdown styling */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content {
+            display: none; position: absolute;
+            background-color: #1a0d27; min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.4);
+            z-index: 10; border-radius: 6px;
+            border: 1px solid #231b2e; padding: 4px 0;
+            right: 0; /* Align to the right */
+            margin-top: 4px;
+        }
+        .dropdown-content button {
+            color: #b9f155; padding: 8px 16px;
+            text-decoration: none; display: block;
+            width: 100%; text-align: left;
+            background: none; border: none;
+            font-size: 0.875rem;
+        }
+        .dropdown-content button:hover { background-color: #2a1d3a; }
+        .dropdown:hover .dropdown-content { display: block; }
+
+    </style>
+</head>
+<body class="flex h-screen flex-col">
+
+    <header class="bg-[#1a0d27] p-3 shadow-md flex justify-between items-center text-white flex-shrink-0">
+        <div class="flex items-center space-x-2">
+             <i id="channelIcon" class="lucide lucide-globe text-xl text-[#b9f155]"></i>
+             <h1 id="channelTitle" class="text-xl font-bold">Global Feed</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div id="connectionStatusContainer" class="flex items-center space-x-1 text-xs text-gray-400" title="Relay Connection Status">
+                 <i id="connectionIcon" class="lucide lucide-wifi-off"></i>
+                 <span id="connectionStatus">Disconnected</span>
+            </div>
+             <button id="manageRelaysBtn" class="p-2 rounded-full hover:bg-gray-700" title="Manage Relays">
+                <i class="lucide lucide-settings"></i>
+            </button>
+            <div id="userInfo" class="flex items-center space-x-2 hidden">
+                <img id="userAvatar" src="https://placehold.co/40x40/9147ff/ffffff?text=?" alt="User Avatar" class="w-8 h-8 rounded-full object-cover avatar">
+                <span id="userName" class="text-sm font-medium">Not Logged In</span>
+                <button id="logoutBtn" class="p-1 rounded-full hover:bg-red-700 text-xs btn-danger" title="Logout">
+                    <i class="lucide lucide-log-out"></i>
+                </button>
+            </div>
+            <div id="loginOptions" class="flex items-center space-x-2">
+                 <button id="loginExtBtn" class="btn-primary font-bold py-2 px-4 rounded-lg shadow text-sm">
+                    Login with Extension
+                </button>
+                 <button id="loginKeyBtn" class="btn-secondary font-bold py-2 px-4 rounded-lg shadow text-sm">
+                    Login with Key
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <aside class="w-64 bg-[#1a0d27] p-4 overflow-y-auto flex-shrink-0 flex flex-col">
+            <h2 class="text-lg font-semibold mb-4 text-gray-300">Channels</h2>
+            <nav id="channelList" class="space-y-1 mb-4 flex-1">
+                <div id="channel-global" class="channel-item active" onclick="selectChannel('global')">
+                    <i class="lucide lucide-globe"></i>
+                    <span>Global Feed</span>
+                </div>
+                </nav>
+            <div class="mt-auto pt-4 border-t border-gray-700">
+                 <label for="addHashtagInput" class="block text-sm font-medium text-gray-400 mb-1">Add Channel</label>
+                 <div class="flex space-x-2">
+                    <input type="text" id="addHashtagInput" class="flex-1 px-3 py-1.5 text-sm" placeholder="e.g., nostr">
+                    <button id="addHashtagBtn" class="btn-primary p-2" title="Add Hashtag">
+                        <i class="lucide lucide-plus"></i>
+                    </button>
+                 </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col bg-[#0c0413] overflow-hidden">
+            <div class="px-4 pt-3 pb-1 border-b border-gray-700 flex justify-end">
+                <div class="dropdown">
+                    <button id="filterBtn" class="btn-secondary text-sm px-3 py-1 inline-flex items-center">
+                        <span id="filterLabel">Global Messages</span>
+                        <i class="lucide lucide-chevron-down ml-1"></i>
+                    </button>
+                    <div id="filterDropdownContent" class="dropdown-content">
+                        <button onclick="setFilterMode('global')">Global Messages</button>
+                        <button onclick="setFilterMode('following')" id="followingFilterBtn" class="hidden">Following Only</button>
+                        </div>
+                </div>
+            </div>
+
+            <div id="messageContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div class="text-center text-gray-500 pt-10">Connecting to relays...</div>
+            </div>
+
+            <div class="bg-[#1a0d27] p-4 flex items-center flex-shrink-0 border-t border-gray-700">
+                <input type="text" id="messageInput" class="flex-1 px-4 py-2 mr-3 focus:outline-none" placeholder="Type your message..." disabled>
+                <button id="sendBtn" class="btn-primary font-bold py-2 px-4 rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center" disabled>
+                     <i class="lucide lucide-send mr-1"></i> Send
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <div id="relayManagementModal" class="fixed inset-0 z-50 flex items-center justify-center modal hidden">
+        <div class="modal-content p-6 rounded-lg shadow-xl w-full max-w-lg"> <h2 class="text-2xl font-bold mb-4 text-white">Manage Relays</h2>
+            <div class="mb-4">
+                <label for="relayInput" class="block text-sm font-medium text-gray-300 mb-1">Relay URLs (comma-separated)</label>
+                <textarea id="relayInput" rows="4" class="w-full p-2 rounded bg-[#1a0d27] border border-gray-600 text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#9147ff]"></textarea>
+            </div>
+             <h3 class="text-lg font-semibold mb-2 text-gray-300">Connection Status</h3>
+             <div id="modalRelayList" class="space-y-2 max-h-48 overflow-y-auto mb-4 bg-[#1a0d27] p-3 rounded border border-gray-600">
+                 <p class="text-gray-500 text-sm">No relays configured.</p>
+             </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelRelayBtn" class="btn-secondary py-2 px-4 rounded-lg">Cancel</button>
+                <button id="saveRelayBtn" class="btn-primary py-2 px-4 rounded-lg">Save & Reconnect</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="privateKeyModal" class="fixed inset-0 z-50 flex items-center justify-center modal hidden">
+        <div class="modal-content p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-white">Login with Private Key</h2>
+            <div class="warning-text">
+                <i class="lucide lucide-alert-triangle inline-block mr-1"></i>
+                <strong>Warning:</strong> Pasting your private key (nsec) is less secure. Use an extension if possible. Key stored in memory only.
+            </div>
+            <div class="mb-4">
+                <label for="privateKeyInput" class="block text-sm font-medium text-gray-300 mb-1">Private Key (nsec)</label>
+                <input type="password" id="privateKeyInput" class="w-full p-2 rounded focus:outline-none" placeholder="nsec...">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelPrivateKeyBtn" class="btn-secondary py-2 px-4 rounded-lg">Cancel</button>
+                <button id="submitPrivateKeyBtn" class="btn-primary py-2 px-4 rounded-lg">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorDisplay" class="fixed bottom-4 right-4 bg-red-700 text-white p-3 rounded-lg shadow-lg hidden z-60 max-w-sm">
+        <div class="flex justify-between items-center">
+            <span id="errorMessage" class="text-sm"></span>
+            <button onclick="document.getElementById('errorDisplay').classList.add('hidden')" class="ml-2 font-bold text-lg leading-none">&times;</button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Constants and State ---
+        const DEFAULT_RELAYS = [
+            "wss://relay.damus.io", "wss://relay.snort.social",
+            "wss://nos.lol", "wss://nostr.wine",
+        ];
+        let relays = [];
+        let connectedRelays = new Map(); // Map<url, WebSocket>
+        let currentSubscriptionId = null; // Track the main content subscription ID
+        let userPubKey = null;
+        let userPrivateKey = null; // Store private key in memory ONLY if logged in with key
+        let loginMethod = null; // 'extension' or 'privateKey'
+        let userProfile = null; // Store user's own profile
+        let profilesCache = new Map(); // Map<pubkey, { name, picture, lud16, fetchedAt, created_at }>
+        let eventsCache = new Map(); // Map<id, event> - Simple cache to avoid re-rendering
+        let userFollows = new Set(); // Set<pubkey> - Pubkeys the user follows (from Kind 3)
+        let subscribedHashtags = []; // Array<string> - Hashtags user is tracking
+        let currentChannel = 'global'; // 'global' or '#hashtag'
+        let currentFilterMode = 'global'; // 'global', 'following'
+
+        // --- DOM Elements ---
+        const messageContainer = document.getElementById('messageContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const loginExtBtn = document.getElementById('loginExtBtn');
+        const loginKeyBtn = document.getElementById('loginKeyBtn');
+        const loginOptions = document.getElementById('loginOptions');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userInfo = document.getElementById('userInfo');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+        const connectionStatusContainer = document.getElementById('connectionStatusContainer');
+        const connectionIcon = document.getElementById('connectionIcon');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const manageRelaysBtn = document.getElementById('manageRelaysBtn');
+        const relayManagementModal = document.getElementById('relayManagementModal');
+        const relayInput = document.getElementById('relayInput');
+        const modalRelayList = document.getElementById('modalRelayList'); // List inside modal
+        const saveRelayBtn = document.getElementById('saveRelayBtn');
+        const cancelRelayBtn = document.getElementById('cancelRelayBtn');
+        const privateKeyModal = document.getElementById('privateKeyModal');
+        const privateKeyInput = document.getElementById('privateKeyInput');
+        const submitPrivateKeyBtn = document.getElementById('submitPrivateKeyBtn');
+        const cancelPrivateKeyBtn = document.getElementById('cancelPrivateKeyBtn');
+        const errorDisplay = document.getElementById('errorDisplay');
+        const errorMessage = document.getElementById('errorMessage');
+        const channelList = document.getElementById('channelList');
+        const addHashtagInput = document.getElementById('addHashtagInput');
+        const addHashtagBtn = document.getElementById('addHashtagBtn');
+        const channelIcon = document.getElementById('channelIcon');
+        const channelTitle = document.getElementById('channelTitle');
+        const filterBtn = document.getElementById('filterBtn');
+        const filterLabel = document.getElementById('filterLabel');
+        const followingFilterBtn = document.getElementById('followingFilterBtn');
+
+
+        // --- Storage Keys ---
+        const STORAGE_KEY_RELAYS = 'nostrRelays';
+        const STORAGE_KEY_HASHTAGS = 'nostrHashtags';
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.NostrTools === 'undefined') {
+                 console.error("nostr-tools library not loaded!");
+                 showError("Required library (nostr-tools) failed to load. Private key login may not work.");
+                 loginKeyBtn.disabled = true;
+                 loginKeyBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                 loginKeyBtn.title = "nostr-tools library failed to load";
+            }
+
+            // Load data from storage
+            loadDataFromStorage();
+
+            // Update UI
+            updateHashtagListUI(); // Display hashtags
+            updateRelayListUI(); // Populate modal list initially
+            connectToRelays(); // Connect and trigger initial subscription
+            checkLoginStatus(); // Check if already logged in
+
+            // Event Listeners
+            loginExtBtn.addEventListener('click', loginWithExtension);
+            loginKeyBtn.addEventListener('click', showPrivateKeyModal);
+            logoutBtn.addEventListener('click', logout);
+            sendBtn.addEventListener('click', sendPost);
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPost(); }
+            });
+            manageRelaysBtn.addEventListener('click', openRelayModal);
+            cancelRelayBtn.addEventListener('click', closeRelayModal);
+            saveRelayBtn.addEventListener('click', saveRelays);
+            cancelPrivateKeyBtn.addEventListener('click', hidePrivateKeyModal);
+            submitPrivateKeyBtn.addEventListener('click', loginWithPrivateKey);
+            privateKeyInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') loginWithPrivateKey(); });
+            addHashtagBtn.addEventListener('click', addHashtag);
+            addHashtagInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addHashtag(); });
+
+            messageContainer.innerHTML = ''; // Clear initial "Connecting..." message
+            updateChannelHeader(); // Set initial header
+            updateFilterButtonLabel(); // Set initial filter button text
+        });
+
+        // --- Error Handling ---
+        function showError(message) {
+            console.error("Error:", message);
+            errorMessage.textContent = message;
+            errorDisplay.classList.remove('hidden');
+            setTimeout(() => {
+                 if (errorMessage.textContent === message) errorDisplay.classList.add('hidden');
+            }, 7000);
+        }
+
+        // --- Storage ---
+        function loadDataFromStorage() {
+            // Load relays
+            const storedRelays = localStorage.getItem(STORAGE_KEY_RELAYS);
+            relays = storedRelays ? JSON.parse(storedRelays) : [...DEFAULT_RELAYS];
+            if (!Array.isArray(relays) || relays.length === 0) {
+                relays = [...DEFAULT_RELAYS]; saveRelaysToStorage();
+            }
+
+            // Load hashtags
+            const storedHashtags = localStorage.getItem(STORAGE_KEY_HASHTAGS);
+            subscribedHashtags = storedHashtags ? JSON.parse(storedHashtags) : [];
+            if (!Array.isArray(subscribedHashtags)) {
+                subscribedHashtags = []; saveHashtags();
+            }
+        }
+
+        // --- Login / Logout ---
+        async function checkLoginStatus() { /* ... (no changes needed) ... */
+             if (typeof window.nostr !== 'undefined') {
+                try {
+                    const pubkey = await window.nostr.getPublicKey();
+                    if (pubkey) {
+                        handleLoginSuccess(pubkey, 'extension');
+                    }
+                } catch (error) {
+                    console.info("Nostr extension check: Not logged in or permission denied initially.");
+                }
+            }
+        }
+        async function loginWithExtension() { /* ... (no changes needed) ... */
+            if (typeof window.nostr === 'undefined') {
+                showError("Nostr extension (like Alby, nos2x) not found. Install one or use private key login.");
+                return;
+            }
+            try {
+                const pubkey = await window.nostr.getPublicKey();
+                if (pubkey) {
+                    handleLoginSuccess(pubkey, 'extension');
+                } else {
+                     showError("Login failed: Could not get public key from extension.");
+                }
+            } catch (error) {
+                showError(`Extension login failed: ${error.message || error}`);
+            }
+        }
+        function showPrivateKeyModal() { /* ... (no changes needed) ... */
+            if (typeof window.NostrTools === 'undefined') {
+                 showError("Cannot login with key: nostr-tools library not loaded.");
+                 return;
+            }
+            privateKeyInput.value = ''; // Clear previous input
+            privateKeyModal.classList.remove('hidden');
+            privateKeyInput.focus(); // Focus the input field
+        }
+        function hidePrivateKeyModal() { /* ... (no changes needed) ... */
+             privateKeyModal.classList.add('hidden');
+        }
+        function loginWithPrivateKey() { /* ... (no changes needed) ... */
+            const nsec = privateKeyInput.value.trim();
+            if (!nsec) { showError("Please enter your private key (nsec)."); return; }
+            if (!nsec.startsWith('nsec')) { showError("Invalid format. Private key should start with 'nsec'."); return; }
+            if (typeof window.NostrTools === 'undefined' || typeof window.NostrTools.nip19 === 'undefined' || typeof window.NostrTools.getPublicKey === 'undefined') {
+                showError("Login failed: Required Nostr library functions are missing."); return;
+            }
+            try {
+                 const { type, data: privateKeyHex } = window.NostrTools.nip19.decode(nsec);
+                 if (type !== 'nsec' || !privateKeyHex) throw new Error("Failed to decode nsec key.");
+                const pubkey = window.NostrTools.getPublicKey(privateKeyHex);
+                userPrivateKey = privateKeyHex; // STORE THE HEX KEY
+                handleLoginSuccess(pubkey, 'privateKey');
+                hidePrivateKeyModal();
+            } catch (error) {
+                console.error("Private key login error:", error);
+                showError(`Login failed: ${error.message || "Invalid private key."}`);
+                userPrivateKey = null;
+            }
+        }
+        function handleLoginSuccess(pubkey, method) { /* ... (minor changes) ... */
+            userPubKey = pubkey;
+            loginMethod = method;
+            console.log(`Logged in via ${method} with pubkey:`, userPubKey);
+
+            loginOptions.classList.add('hidden');
+            userInfo.classList.remove('hidden');
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+            followingFilterBtn.classList.remove('hidden'); // Show 'Following' filter option
+
+            userName.textContent = shortenPubKey(userPubKey);
+            userAvatar.src = `https://placehold.co/40x40/9147ff/ffffff?text=${userPubKey.substring(0, 2)}`;
+
+            fetchProfiles([userPubKey]); // Fetch user's own profile
+            fetchFollowList(); // Fetch user's follow list
+            // Resubscribe based on current channel/filter after getting follows
+        }
+        function logout() { /* ... (minor changes) ... */
+            userPubKey = null;
+            userPrivateKey = null;
+            loginMethod = null;
+            userProfile = null;
+            userFollows.clear(); // Clear follow list
+
+            // Update UI
+            loginOptions.classList.remove('hidden');
+            userInfo.classList.add('hidden');
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+            followingFilterBtn.classList.add('hidden'); // Hide 'Following' filter option
+            userName.textContent = "Not Logged In";
+            userAvatar.src = `https://placehold.co/40x40/7289da/ffffff?text=?`;
+            localStorage.clear();
+
+            // Reset filter mode and resubscribe
+            currentFilterMode = 'global';
+            updateFilterButtonLabel();
+            subscribeToFeed(); // Resubscribe to global feed
+            console.log("Logged out");
+        }
+
+        // --- Event Signing ---
+        async function signEvent(event) { /* ... (no changes needed) ... */
+            if (!userPubKey) throw new Error("Not logged in.");
+            delete event.id; delete event.sig;
+            event.pubkey = userPubKey;
+            event.created_at = Math.floor(Date.now() / 1000);
+
+            if (loginMethod === 'extension') {
+                if (typeof window.nostr === 'undefined') throw new Error("Nostr extension not available.");
+                try { return await window.nostr.signEvent(event); }
+                catch (error) { throw new Error(`Extension failed to sign: ${error.message || error}`); }
+            } else if (loginMethod === 'privateKey') {
+                if (!userPrivateKey || typeof window.NostrTools === 'undefined') throw new Error("Private key/nostr-tools missing.");
+                try {
+                     event.id = window.NostrTools.getEventHash(event);
+                     event.sig = window.NostrTools.signEvent(event, userPrivateKey);
+                     return event;
+                } catch (error) { throw new Error(`Failed to sign with key: ${error.message || error}`); }
+            } else { throw new Error("Unknown login method."); }
+        }
+
+        // --- Relay Management ---
+        function saveRelaysToStorage() { /* ... (no changes needed) ... */
+            localStorage.setItem(STORAGE_KEY_RELAYS, JSON.stringify(relays));
+        }
+
+        function updateRelayListUI() { /* ... (updated to populate modal list) ... */
+            if (!modalRelayList) return;
+            modalRelayList.innerHTML = ''; // Clear existing list
+            if (relays.length === 0) {
+                 modalRelayList.innerHTML = '<p class="text-gray-500 text-sm">No relays configured.</p>';
+                 updateOverallConnectionStatus();
+                 return;
+            }
+
+            relays.forEach(url => {
+                const ws = connectedRelays.get(url);
+                const isConnected = ws && ws.readyState === WebSocket.OPEN;
+                const isConnecting = ws && ws.readyState === WebSocket.CONNECTING;
+                let statusColor = 'text-red-400'; let statusIcon = 'lucide-x-circle'; let title = 'Disconnected';
+
+                if (isConnected) { statusColor = 'text-green-400'; statusIcon = 'lucide-check-circle'; title = 'Connected'; }
+                else if (isConnecting) { statusColor = 'text-yellow-400'; statusIcon = 'lucide-loader-2 animate-spin'; title = 'Connecting...'; }
+
+                const li = document.createElement('div'); // Use div for better layout control
+                li.className = `flex items-center justify-between text-sm ${statusColor} py-1`;
+                li.title = `${url} - ${title}`;
+                li.innerHTML = `
+                    <span class="truncate flex-1 mr-2">${url.replace('wss://', '').replace(/\/$/, '')}</span>
+                    <i class="lucide ${statusIcon} ml-1 flex-shrink-0"></i>
+                `;
+                modalRelayList.appendChild(li);
+            });
+            updateOverallConnectionStatus();
+        }
+        function updateOverallConnectionStatus() { /* ... (updated icon logic) ... */
+            const connectedCount = Array.from(connectedRelays.values()).filter(ws => ws.readyState === WebSocket.OPEN).length;
+            const connectingCount = Array.from(connectedRelays.values()).filter(ws => ws.readyState === WebSocket.CONNECTING).length;
+            const totalRelays = relays.length;
+
+            let statusText = '';
+            let statusClass = 'text-gray-400';
+            let iconClass = 'lucide-wifi-off';
+
+            if (connectedCount > 0) {
+                statusText = `Connected (${connectedCount}/${totalRelays})`;
+                statusClass = 'text-green-400';
+                iconClass = 'lucide-wifi';
+            } else if (connectingCount > 0) {
+                 statusText = `Connecting... (${connectingCount}/${totalRelays})`;
+                 statusClass = 'text-yellow-400';
+                 iconClass = 'lucide-loader-2 animate-spin';
+            } else if (totalRelays > 0) {
+                statusText = `Disconnected`;
+                statusClass = 'text-red-400';
+                iconClass = 'lucide-wifi-off';
+            } else {
+                statusText = 'No Relays';
+                statusClass = 'text-gray-500';
+                iconClass = 'lucide-wifi-off';
+            }
+
+            connectionStatus.textContent = statusText;
+            connectionStatusContainer.className = `flex items-center space-x-1 text-xs ${statusClass} mr-2`;
+            connectionIcon.className = `lucide ${iconClass}`;
+        }
+        function connectToRelays() { /* ... (updated to call subscribeToFeed) ... */
+            disconnectAllRelays();
+            messageContainer.innerHTML = '<div class="text-center text-gray-500 pt-10">Connecting to relays...</div>';
+
+            if (relays.length === 0) {
+                showError("No relays configured. Please add relays in the settings modal.");
+                updateRelayListUI();
+                return;
+            }
+
+            console.log("Connecting to relays:", relays);
+            relays.forEach(url => connectToRelay(url));
+            updateRelayListUI(); // Show connecting status immediately
+        }
+        function connectToRelay(url) { /* ... (updated to call subscribeToFeed on first connect) ... */
+            if (!url || typeof url !== 'string' || !url.startsWith('ws')) { console.error(`Invalid relay URL: ${url}`); return; }
+            if (connectedRelays.has(url) && connectedRelays.get(url).readyState !== WebSocket.CLOSED) return;
+
+            console.log(`Attempting to connect to ${url}...`);
+            try {
+                const ws = new WebSocket(url);
+                connectedRelays.set(url, ws);
+                updateRelayListUI();
+
+                ws.onopen = () => {
+                    console.log(`Connected to ${url}`);
+                    updateRelayListUI();
+                    // If this is the *first* connection established, subscribe to the feed
+                    if (Array.from(connectedRelays.values()).filter(w => w.readyState === WebSocket.OPEN).length === 1) {
+                         if (messageContainer.innerHTML.includes('Connecting to relays...')) {
+                             messageContainer.innerHTML = ''; // Clear connecting message
+                         }
+                         subscribeToFeed(); // Initial subscription based on current channel/filter
+                    } else {
+                        // For subsequent connections, just send the *existing* subscription
+                        if (currentSubscriptionId) {
+                            const sub = findSubscriptionById(currentSubscriptionId); // Helper needed or manage subs differently
+                             if (sub) {
+                                console.log(`Resending subscription ${currentSubscriptionId} to new relay ${url}`);
+                                sendToWebSocket(ws, ["REQ", currentSubscriptionId, ...sub.filters]);
+                             }
+                        }
+                    }
+                };
+                ws.onmessage = (event) => handleRelayMessage(url, event.data);
+                ws.onerror = (error) => { console.error(`WebSocket Error (${url}):`, error); updateRelayListUI(); };
+                ws.onclose = (event) => { console.log(`Disconnected from ${url}. Code: ${event.code}`); updateRelayListUI(); };
+
+            } catch (error) {
+                 console.error(`Failed to create WebSocket for ${url}:`, error);
+                 showError(`Invalid relay URL or connection refused: ${url.replace('wss://','')}`);
+                 connectedRelays.delete(url); updateRelayListUI();
+            }
+        }
+        function disconnectAllRelays() { /* ... (no changes needed) ... */
+            console.log("Disconnecting from all relays...");
+            connectedRelays.forEach((ws, url) => {
+                if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                    ws.close(1000, "Client disconnecting");
+                }
+            });
+            connectedRelays.clear();
+            updateRelayListUI();
+        }
+        function sendToWebSocket(ws, message) { /* ... (no changes needed) ... */
+             if (ws.readyState === WebSocket.OPEN) {
+                 try { ws.send(JSON.stringify(message)); }
+                 catch (error) { console.error(`Failed to send to ${ws.url}:`, error); }
+            } else { console.warn(`WS not open for ${ws.url}. State: ${ws.readyState}.`); }
+        }
+        function broadcast(message) { /* ... (no changes needed) ... */
+            let sentCount = 0;
+            connectedRelays.forEach(ws => {
+                if (ws.readyState === WebSocket.OPEN) { sendToWebSocket(ws, message); sentCount++; }
+            });
+            if (sentCount === 0 && relays.length > 0) console.warn("Broadcast failed: No relays connected.");
+        }
+        // Simplified subscription management - only one main content subscription active at a time
+        function subscribe(subId, filters) {
+             unsubscribe(); // Close previous subscription first
+             currentSubscriptionId = subId;
+             broadcast(["REQ", subId, ...filters]);
+             console.log(`Subscribed (${subId}):`, JSON.stringify(filters));
+        }
+        function unsubscribe() {
+             if (currentSubscriptionId) {
+                 broadcast(["CLOSE", currentSubscriptionId]);
+                 console.log(`Unsubscribed (${currentSubscriptionId})`);
+                 currentSubscriptionId = null;
+             }
+        }
+        // Helper to find subscription details (if needed, but simplified model avoids this)
+        // function findSubscriptionById(subId) { ... }
+
+        // --- Message Handling ---
+        function handleRelayMessage(url, data) { /* ... (updated EVENT handling) ... */
+            try {
+                const message = JSON.parse(data);
+                const messageType = message[0];
+
+                switch (messageType) {
+                    case "EVENT":
+                        const subId = message[1];
+                        const event = message[2];
+                        // Only process if it matches the current main subscription
+                        if (subId === currentSubscriptionId) {
+                            event.relay_url = url; // Add relay context
+                            processEvent(event);
+                        } else {
+                            // Could be a temporary subscription (profiles, follows)
+                            handleTemporarySubscriptionEvent(subId, event);
+                        }
+                        break;
+                    case "NOTICE": console.warn(`NOTICE from ${url}: ${message[1]}`); break; // Filter noisy notices if needed
+                    case "OK": /* console.log(`OK from ${url}: ${message}`); */ break; // Handle success/failure feedback
+                    case "EOSE": /* console.log(`EOSE for ${message[1]} from ${url}`); */ break; // End of Stored Events
+                    default: console.warn(`Unknown msg type from ${url}: ${messageType}`, message);
+                }
+            } catch (error) { console.error(`Failed to parse msg from ${url}: ${data}`, error); }
+        }
+
+        // Handle events from temporary subs (like profile/follow fetches)
+        function handleTemporarySubscriptionEvent(subId, event) {
+             console.log(`Event for temp sub ${subId}`, event);
+             if (subId.startsWith('profiles-')) processMetadataEvent(event);
+             if (subId.startsWith('follows-')) processFollowListEvent(event);
+             // Add handlers for other temporary subscriptions if needed
+        }
+
+        // --- Event Processing & Rendering ---
+        function processEvent(event) { /* ... (updated Kind 1 handling) ... */
+            if (!event?.id || !event.pubkey || typeof event.created_at !== 'number' || typeof event.kind !== 'number' || !Array.isArray(event.tags) || typeof event.content !== 'string' || !event.sig) {
+                console.warn("Invalid event structure:", event); return;
+            }
+            if (eventsCache.has(event.id)) return; // Avoid duplicates
+            eventsCache.set(event.id, event);
+
+            switch (event.kind) {
+                case 0: processMetadataEvent(event); break;
+                case 1: processTextNoteEvent(event); break;
+                case 3: processFollowListEvent(event); break; // Handle follow list updates
+                // Add other kinds (4: DM, 7: Reaction) here if implemented
+                default: break;
+            }
+        }
+        function processMetadataEvent(event) { /* ... (no changes needed) ... */
+            try {
+                const metadata = JSON.parse(event.content);
+                const pubkey = event.pubkey;
+                const existingProfile = profilesCache.get(pubkey);
+                if (!existingProfile || event.created_at > (existingProfile.created_at || 0)) {
+                     profilesCache.set(pubkey, {
+                        name: metadata.name || metadata.display_name || shortenPubKey(pubkey),
+                        picture: metadata.picture, about: metadata.about, lud16: metadata.lud16 || metadata.lud06,
+                        nip05: metadata.nip05, fetchedAt: Date.now(), created_at: event.created_at
+                    });
+                    console.log(`Updated profile cache for ${shortenPubKey(pubkey)}`);
+                     if (pubkey === userPubKey) { userProfile = profilesCache.get(pubkey); updateUserProfileUI(); }
+                     updateMessagesFromPubKey(pubkey);
+                }
+            } catch (error) { console.error(`Failed to parse metadata for ${event.id} from ${event.pubkey}:`, error); }
+        }
+        function processTextNoteEvent(event) { /* ... (added filtering logic) ... */
+            // Apply filtering rules BEFORE rendering
+            if (currentFilterMode === 'following') {
+                 // Must be logged in and follow list must contain the author
+                 if (!userPubKey || !userFollows.has(event.pubkey)) {
+                     // console.log(`Filtering out note ${event.id} from non-followed user ${shortenPubKey(event.pubkey)}`);
+                     return; // Don't render if not following
+                 }
+            }
+            // Add checks for 'followers' or 'both' modes here if implemented
+
+            // Check if the event matches the current hashtag channel (if active)
+            if (currentChannel.startsWith('#')) {
+                const requiredTag = currentChannel.substring(1).toLowerCase();
+                const hasTag = event.tags.some(tag => tag[0] === 't' && tag[1]?.toLowerCase() === requiredTag);
+                if (!hasTag) {
+                    // console.log(`Filtering out note ${event.id} - missing tag ${requiredTag}`);
+                    return; // Don't render if tag doesn't match
+                }
+            }
+
+            // Render the message if it passes filters
+            renderMessage(event);
+
+            // Fetch profile if needed
+            const profile = profilesCache.get(event.pubkey);
+            if (!profile || (Date.now() - profile.fetchedAt > 3600 * 1000)) {
+                 fetchProfiles([event.pubkey]);
+            }
+        }
+        function processFollowListEvent(event) { /* ... (New function) ... */
+             if (event.kind !== 3 || event.pubkey !== userPubKey) return; // Only process user's own Kind 3
+
+             console.log("Processing user's follow list (Kind 3)...");
+             const follows = new Set();
+             event.tags.forEach(tag => {
+                 if (tag[0] === 'p' && tag[1]) { // 'p' tag indicates a followed pubkey
+                     follows.add(tag[1]);
+                 }
+             });
+
+             // Check if the follow list actually changed
+             if (!setsAreEqual(userFollows, follows)) {
+                 userFollows = follows;
+                 console.log(`Updated follow list: ${userFollows.size} follows.`);
+                 // If the filter mode is 'following', we might need to re-render or re-filter messages
+                 // For simplicity, we can just re-subscribe which clears and refills the feed
+                 if (currentFilterMode === 'following') {
+                     console.log("Follow list changed, resubscribing to 'following' feed.");
+                     subscribeToFeed();
+                 }
+             } else {
+                 console.log("Follow list unchanged.");
+             }
+        }
+
+        // --- Profile & Follow List Handling ---
+        function getProfile(pubkey) { /* ... (no changes needed) ... */
+             const profile = profilesCache.get(pubkey);
+             return profile
+                 ? { name: profile.name || shortenPubKey(pubkey), picture: profile.picture || `https://placehold.co/40x40/9147ff/ffffff?text=${pubkey.substring(0, 2)}` }
+                 : { name: shortenPubKey(pubkey), picture: `https://placehold.co/40x40/9147ff/ffffff?text=${pubkey.substring(0, 2)}` };
+        }
+        function fetchProfiles(pubkeys) { /* ... (updated to use temporary subscription) ... */
+             const pubkeysToFetch = pubkeys.filter(pk => {
+                 const p = profilesCache.get(pk); return !p || (Date.now() - p.fetchedAt > 3600 * 1000);
+             });
+             if (pubkeysToFetch.length === 0) return;
+
+             console.log("Fetching profiles for:", pubkeysToFetch.map(shortenPubKey));
+             const subId = `profiles-${generateSubId()}`;
+             const filters = [{ kinds: [0], authors: pubkeysToFetch }];
+
+             // Use broadcast directly for temporary subscription, no callback needed here
+             broadcast(["REQ", subId, ...filters]);
+
+             // Auto-close after a delay (simple approach)
+             setTimeout(() => broadcast(["CLOSE", subId]), 5000);
+        }
+        function fetchFollowList() { /* ... (New function) ... */
+             if (!userPubKey) return;
+             console.log("Fetching follow list (Kind 3) for user:", shortenPubKey(userPubKey));
+             const subId = `follows-${generateSubId()}`;
+             const filters = [{
+                 kinds: [3], // Follow list event
+                 authors: [userPubKey],
+                 limit: 1 // Get only the latest Kind 3 event
+             }];
+             broadcast(["REQ", subId, ...filters]);
+             // Auto-close after a delay
+             setTimeout(() => broadcast(["CLOSE", subId]), 5000);
+        }
+        function updateUserProfileUI() { /* ... (no changes needed) ... */
+            if (userProfile && userPubKey) {
+                userName.textContent = userProfile.name || shortenPubKey(userPubKey);
+                userAvatar.src = userProfile.picture || `https://placehold.co/40x40/9147ff/ffffff?text=${userPubKey.substring(0, 2)}`;
+                userAvatar.onerror = () => { userAvatar.src = `https://placehold.co/40x40/7289da/ffffff?text=${userPubKey.substring(0, 2)}`; };
+            }
+        }
+        function updateMessagesFromPubKey(pubkey) { /* ... (no changes needed) ... */
+             const profile = getProfile(pubkey);
+             const messages = messageContainer.querySelectorAll(`.message[data-pubkey="${pubkey}"]`);
+             messages.forEach(msgElement => {
+                 const avatarElement = msgElement.querySelector('.avatar-img');
+                 const nameElement = msgElement.querySelector('.author-name');
+                 if (avatarElement) {
+                     avatarElement.src = profile.picture;
+                     avatarElement.onerror = () => { avatarElement.src = `https://placehold.co/40x40/7289da/ffffff?text=${pubkey.substring(0, 2)}`; };
+                 }
+                 if (nameElement) { nameElement.textContent = profile.name; nameElement.title = pubkey; }
+             });
+        }
+
+        // --- Message Rendering ---
+        function renderMessage(event) { /* ... (minor style adjustments if needed) ... */
+            if (!messageContainer) return;
+            const existingElement = document.getElementById(`note-${event.id}`);
+            if (existingElement) return; // Don't re-render
+
+            const profile = getProfile(event.pubkey);
+            const messageId = `note-${event.id}`;
+
+            const profileData = profilesCache.get(event.pubkey);
+            const nip05 = profileData?.nip05;
+            const displayName = nip05 ? `${profile.name} <span class="text-gray-400">(${nip05})</span>` : profile.name;
+
+            const npub = window.NostrTools.nip19.npubEncode(event.pubkey);
+            const messageDiv = document.createElement('div');            
+
+            // Adjusted padding and hover effect
+            messageDiv.className = 'message flex p-3 rounded-md hover:bg-[#1f112e]';
+            messageDiv.id = messageId;
+            messageDiv.dataset.pubkey = event.pubkey;
+            messageDiv.dataset.eventId = event.id;
+            messageDiv.dataset.createdAt = event.created_at; // Store timestamp for sorting
+
+            const timestamp = new Date(event.created_at * 1000);
+            const formattedTime = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const formattedDate = timestamp.toLocaleDateString([], { month: 'short', day: 'numeric'});
+            const fullTimestamp = timestamp.toLocaleString();
+
+            let contentHTML = sanitizeHTML(event.content); // Use basic sanitizer
+            
+            // Add reply button
+            const replyButton = `<button class="reply-button text-gray-400 hover:text-blue-400 text-xs ml-2" onclick="replyToMessage('${event.id}', '${event.pubkey}')">Reply</button>`;
+            
+            contentHTML = formatContent(contentHTML); // Format links, etc.
+
+            messageDiv.innerHTML = `
+                <div class="flex-shrink-0 mr-3">
+                    <img src="${profile.picture}" alt="${profile.name.substring(0, 1)}" class="avatar-img w-10 h-10 rounded-full object-cover avatar" onerror="this.onerror=null; this.src='https://placehold.co/40x40/9147ff/ffffff?text=${event.pubkey.substring(0, 2)}';">
+                </div>
+                <div class="flex-1 overflow-hidden"> <div class="flex items-baseline space-x-2">
+                        <span class="author-name font-semibold text-white hover:underline cursor-pointer truncate" title="${event.pubkey}">${profile.name}</span>
+                        <span class="text-xs text-gray-400 flex-shrink-0" title="${fullTimestamp}">                            
+                            <span class="copyable-text" data-copy-text="${npub}" onclick="copyToClipboard(this)" title="Click to copy npub">
+                                ${npub}
+                            </span>                            
+                            ${formattedDate} ${formattedTime}</span>
+                    </div>
+                    <div class="message-content text-gray-200 mt-1 break-words">${contentHTML}</div>
+                    <div class="mt-1">${replyButton}</div>
+                </div>
+            `;
+
+            // Insert message chronologically (newest at the bottom)
+             const existingMessages = messageContainer.querySelectorAll('.message');
+             let inserted = false;
+             for (let i = existingMessages.length - 1; i >= 0; i--) {
+                 const existingTimestamp = parseInt(existingMessages[i].dataset.createdAt, 10);
+                 if (event.created_at > existingTimestamp) {
+                     messageContainer.insertBefore(messageDiv, existingMessages[i].nextSibling); // Insert after
+                     inserted = true;
+                     break;
+                 }
+             }
+             if (!inserted) { // If it's the oldest or first message
+                 messageContainer.insertBefore(messageDiv, messageContainer.firstChild); // Insert at top
+             }
+
+             // Scroll logic (optional - might be annoying if loading old messages)
+             // const isScrolledToBottom = messageContainer.scrollHeight - messageContainer.clientHeight <= messageContainer.scrollTop + 150;
+             // if (isScrolledToBottom) messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+        
+        function replyToMessage(eventId, pubkey) {
+            const npub = window.NostrTools.nip19.npubEncode(pubkey);
+            const nevent = window.NostrTools.nip19.neventEncode({ id: eventId, relays: [] });
+            messageInput.value = `nostr:${nevent} nostr:${npub} `;
+            messageInput.focus();
+        }
+        function copyToClipboard(element) {
+            const textToCopy = element.dataset.copyText;
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    console.log(`Copied to clipboard: ${textToCopy}`);
+                })
+                .catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+        }
+
+        // Basic HTML Sanitizer
+        function sanitizeHTML(str) {
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML; // Converts < > & etc. to entities
+        }
+
+        // Format content (links, maybe mentions later)
+        function formatContent(content) {
+            // Render simple URLs as clickable links
+            content = content.replace(/(https?:\/\/[^\s]+)/g, (match) => {
+                 // Avoid creating links within existing HTML tags (basic check)
+                 if (match.includes('"') || match.includes("'") || match.includes('<') || match.includes('>')) return match;
+                 return `<a href="${match}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">${match}</a>`;
+            });
+            // TODO: Render NIP-21 (nostr:...) links
+            // TODO: Render NIP-10 mentions (@npub...)
+            // TODO: Render #hashtags as links (maybe link to selectChannel?)
+            return content;
+        }
+
+
+        // --- Sending Messages ---
+        async function sendPost() { /* ... (updated to add hashtag) ... */
+            const content = messageInput.value.trim();
+            if (!content) return;
+            if (!userPubKey || !loginMethod) { showError("Please log in first."); return; }
+
+            sendBtn.disabled = true; sendBtn.innerHTML = '<i class="lucide lucide-loader-2 animate-spin mr-1"></i> Sending...';
+
+            let tags = [];
+            // Add hashtag if currently in a hashtag channel
+            if (currentChannel.startsWith('#')) {
+                const tagName = currentChannel.substring(1);
+                tags.push(["t", tagName]); // Add NIP-10 topic tag
+            }
+            // TODO: Add reply/mention tags ('e' and 'p') if implementing replies
+
+            let event = { kind: 1, tags: tags, content: content };
+
+            try {
+                const signedEvent = await signEvent(event);
+                console.log("Publishing event:", signedEvent);
+                broadcast(["EVENT", signedEvent]);
+                messageInput.value = ''; // Clear input on successful broadcast attempt
+                // Optional: Optimistic rendering (might cause duplicates if relay confirms late)
+                // processEvent(signedEvent); // Process immediately for UI update
+                // messageContainer.scrollTop = messageContainer.scrollHeight;
+            } catch (error) {
+                console.error("Failed to sign or broadcast:", error);
+                showError(`Failed to send: ${error.message}`);
+            } finally {
+                 sendBtn.disabled = false; sendBtn.innerHTML = '<i class="lucide lucide-send mr-1"></i> Send';
+                 messageInput.focus();
+            }
+        }
+
+        // --- Subscriptions & Filtering ---
+        function subscribeToFeed() { /* ... (New central subscription logic) ... */
+            console.log(`Subscribing to feed. Channel: ${currentChannel}, Filter: ${currentFilterMode}`);
+            messageContainer.innerHTML = `<div class="text-center text-gray-500 pt-10">Loading ${currentChannel === 'global' ? 'messages' : currentChannel}...</div>`; // Show loading state
+            eventsCache.clear(); // Clear cache for new feed
+
+            let filters = [{
+                kinds: [1], // Text notes
+                limit: 50 // Adjust limit as needed
+            }];
+
+            // Apply channel filter (#hashtag)
+            if (currentChannel.startsWith('#')) {
+                const tagName = currentChannel.substring(1);
+                filters[0]['#t'] = [tagName]; // Filter by NIP-10 topic tag
+            }
+
+            // Apply user filter (following)
+            if (currentFilterMode === 'following') {
+                 if (!userPubKey) {
+                     console.warn("Cannot filter by 'following': User not logged in.");
+                     showError("Login required to view 'Following' feed.");
+                     // Revert to global? Or show error message?
+                     setFilterMode('global'); // Revert to global for now
+                     filters[0].authors = undefined; // Remove author filter if login fails
+                 } else if (userFollows.size === 0) {
+                     console.warn("Filtering by 'following', but follow list is empty.");
+                     // Show a message indicating empty follow list?
+                     messageContainer.innerHTML = '<div class="text-center text-gray-500 pt-10">Your following feed is empty. Follow some people!</div>';
+                     // Send an empty subscription to avoid errors, or don't subscribe?
+                     // For now, send the request, it will just return nothing.
+                     filters[0].authors = []; // Empty array means no authors match
+                 } else {
+                     // Filter by authors the user follows
+                     filters[0].authors = Array.from(userFollows);
+                 }
+            } else {
+                 // Global mode - remove any author filter
+                 filters[0].authors = undefined;
+            }
+
+            // Add Kind 0 filter to fetch profiles for authors in the feed?
+            // This can be noisy. Fetching on demand (in processTextNoteEvent) is often better.
+            // let profileFilter = { kinds: [0], authors: filters[0].authors, limit: 50 }; // Example
+
+            const subId = `main-feed-${generateSubId()}`;
+            subscribe(subId, filters); // Use the central subscribe function
+        }
+
+        function setFilterMode(mode) { /* ... (New function) ... */
+             if (mode === currentFilterMode) return; // No change
+
+             if (mode === 'following' && !userPubKey) {
+                 showError("Please log in to view messages from people you follow.");
+                 return;
+             }
+
+             console.log("Setting filter mode to:", mode);
+             currentFilterMode = mode;
+             updateFilterButtonLabel();
+             subscribeToFeed(); // Resubscribe with the new filter
+        }
+
+        function updateFilterButtonLabel() { /* ... (New function) ... */
+             switch (currentFilterMode) {
+                 case 'following': filterLabel.textContent = "Following Only"; break;
+                 // Add cases for 'followers', 'both' if implemented
+                 case 'global':
+                 default: filterLabel.textContent = "Global Messages"; break;
+             }
+        }
+
+        // --- Hashtag Channel Management ---
+        function saveHashtags() { /* ... (New function) ... */
+            localStorage.setItem(STORAGE_KEY_HASHTAGS, JSON.stringify(subscribedHashtags));
+        }
+
+        function updateHashtagListUI() { /* ... (New function) ... */
+             if (!channelList) return;
+             // Clear existing hashtags, keep global feed item
+             channelList.querySelectorAll('.hashtag-channel').forEach(el => el.remove());
+
+             subscribedHashtags.forEach(tag => {
+                 const channelId = `channel-#${tag}`;
+                 const div = document.createElement('div');
+                 div.id = channelId;
+                 div.className = 'channel-item hashtag-channel flex justify-between items-center'; // Added flex for delete button
+                 div.onclick = () => selectChannel(`#${tag}`);
+                 div.innerHTML = `
+                     <div class="flex items-center gap-2 overflow-hidden"> <i class="lucide lucide-hash"></i>
+                         <span class="truncate">${tag}</span>
+                     </div>
+                     <button class="text-gray-500 hover:text-red-400 p-1 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation(); removeHashtag('${tag}');" title="Remove #${tag}">
+                        <i class="lucide lucide-trash-2 text-xs"></i>
+                     </button>
+                 `;
+                 // Add group class for hover effect on delete button
+                 div.classList.add('group');
+                 channelList.appendChild(div);
+             });
+             updateActiveChannelHighlight(); // Ensure correct item is highlighted
+        }
+        function addHashtag() { /* ... (New function) ... */
+             let tagName = addHashtagInput.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''); // Sanitize tag
+             if (!tagName) return;
+             if (subscribedHashtags.includes(tagName)) {
+                 showError(`Hashtag #${tagName} already added.`);
+                 return;
+             }
+             subscribedHashtags.push(tagName);
+             subscribedHashtags.sort(); // Keep sorted
+             saveHashtags();
+             updateHashtagListUI();
+             addHashtagInput.value = '';
+             selectChannel(`#${tagName}`); // Switch to the new channel
+        }
+        function removeHashtag(tagToRemove) { /* ... (New function) ... */
+             subscribedHashtags = subscribedHashtags.filter(tag => tag !== tagToRemove);
+             saveHashtags();
+             updateHashtagListUI();
+             // If the removed channel was active, switch back to global
+             if (currentChannel === `#${tagToRemove}`) {
+                 selectChannel('global');
+             }
+        }
+        function selectChannel(channelId) { /* ... (New function) ... */
+             if (channelId === currentChannel) return;
+             console.log("Selecting channel:", channelId);
+             currentChannel = channelId;
+             updateActiveChannelHighlight();
+             updateChannelHeader();
+             subscribeToFeed(); // Resubscribe for the new channel/feed
+        }
+        function updateActiveChannelHighlight() { /* ... (New function) ... */
+             document.querySelectorAll('.channel-item').forEach(item => {
+                 item.classList.remove('active');
+             });
+             const activeItemId = `channel-${currentChannel.startsWith('#') ? currentChannel : 'global'}`;
+             const activeItem = document.getElementById(activeItemId);
+             if (activeItem) {
+                 activeItem.classList.add('active');
+             }
+        }
+        function updateChannelHeader() { /* ... (New function) ... */
+             if (currentChannel === 'global') {
+                 channelIcon.className = 'lucide lucide-globe text-xl text-[#b9f155]';
+                 channelTitle.textContent = 'Global Feed';
+             } else {
+                 channelIcon.className = 'lucide lucide-hash text-xl text-[#b9f155]';
+                 channelTitle.textContent = currentChannel; // Display #hashtag
+             }
+        }
+
+
+        // --- Settings/Relay Modal ---
+        function openRelayModal() { /* ... (Renamed from openSettingsModal) ... */
+            relayInput.value = relays.join(', '); // Populate with current relays
+            updateRelayListUI(); // Ensure modal list is up-to-date when opened
+            relayManagementModal.classList.remove('hidden');
+        }
+        function closeRelayModal() { /* ... (Renamed from closeSettingsModal) ... */
+            relayManagementModal.classList.add('hidden');
+        }
+        function saveRelays() { /* ... (Renamed from saveSettings) ... */
+            const newRelayUrls = relayInput.value
+                .split(',')
+                .map(url => url.trim())
+                .filter(url => url && (url.startsWith('wss://') || url.startsWith('ws://'))); // Basic validation
+
+            // Allow clearing all relays
+            if (newRelayUrls.length === 0 && relayInput.value.trim() !== '') {
+                 showError("Invalid relay format. Enter valid WebSocket URLs (wss://...) separated by commas, or leave blank to remove all.");
+                 return;
+            }
+
+            if (JSON.stringify(relays) !== JSON.stringify(newRelayUrls)) {
+                 relays = newRelayUrls;
+                 saveRelaysToStorage();
+                 console.log("Relays updated:", relays);
+                 connectToRelays(); // Reconnect to the new set
+             } else {
+                 console.log("Relay list unchanged.");
+             }
+            closeRelayModal();
+        }
+
+        // --- Utility Functions ---
+        function shortenPubKey(pubkey) { /* ... (no changes needed) ... */
+            if (!pubkey || pubkey.length < 10) return "invalid_key";
+            return `${pubkey.substring(0, 6)}...${pubkey.substring(pubkey.length - 4)}`;
+        }
+        function generateSubId() { /* ... (no changes needed) ... */
+            return `sub-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        }
+        function setsAreEqual(setA, setB) { /* ... (New utility) ... */
+            if (setA.size !== setB.size) return false;
+            for (const item of setA) { if (!setB.has(item)) return false; }
+            return true;
+        }
+
+    </script>
+</body>
+</html>
