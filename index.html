@@ -181,6 +181,10 @@
 <body class="flex h-screen flex-col">
 
     <header class="bg-[#1a0d27] p-3 shadow-md flex justify-between items-center text-white flex-shrink-0">
+        <button id="toggleSidebarBtn" class="md:hidden p-2 rounded-full hover:bg-gray-700 mr-2" title="Toggle Sidebar">
+            <i class="lucide lucide-menu"></i>
+        </button>
+
         <div class="flex items-center space-x-2">
              <i id="channelIcon" class="lucide lucide-globe text-xl text-[#b9f155]"></i>
              <h1 id="channelTitle" class="text-xl font-bold">Global Feed</h1>
@@ -212,7 +216,7 @@
     </header>
 
     <div class="flex flex-1 overflow-hidden">
-        <aside class="w-64 bg-[#1a0d27] p-4 overflow-y-auto flex-shrink-0 flex flex-col">
+        <aside id="sidebar" class="w-64 bg-[#1a0d27] p-4 overflow-y-auto flex-shrink-0 flex flex-col">
             <h2 class="text-lg font-semibold mb-4 text-gray-300">Channels</h2>
             <nav id="channelList" class="space-y-1 mb-4 flex-1">
                 <div id="channel-global" class="channel-item active" onclick="selectChannel('global')">
@@ -353,6 +357,7 @@
         const channelIcon = document.getElementById('channelIcon');
         const channelTitle = document.getElementById('channelTitle');
         const filterBtn = document.getElementById('filterBtn');
+        const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
         const filterLabel = document.getElementById('filterLabel');
         const followingFilterBtn = document.getElementById('followingFilterBtn');
 
@@ -397,6 +402,7 @@
             addHashtagBtn.addEventListener('click', addHashtag);
             addHashtagInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addHashtag(); });
 
+            toggleSidebarBtn.addEventListener('click', toggleSidebar);
             messageContainer.innerHTML = ''; // Clear initial "Connecting..." message
             updateChannelHeader(); // Set initial header
             updateFilterButtonLabel(); // Set initial filter button text
@@ -1190,6 +1196,11 @@
                  channelIcon.className = 'lucide lucide-hash text-xl text-[#b9f155]';
                  channelTitle.textContent = currentChannel; // Display #hashtag
              }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
         }
 
 
