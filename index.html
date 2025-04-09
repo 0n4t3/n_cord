@@ -3,9 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nostr Client - Discord Style</title>
+    <title>n_cord</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0c0413">
+
     <style>
+      .hamburger {
+        display: inline-block;
+        cursor: pointer;
+      }
       @font-face {
         font-family: 'LucideIcons';
         src: url(https://cdn.jsdelivr.net/npm/lucide-static@latest/font/Lucide.ttf) format('truetype');
@@ -46,6 +56,16 @@
         ::-webkit-scrollbar-thumb:hover { background: #0b0610; }
 
         /* Basic styles */
+        html {
+            height: 100vh; /* Constrain to viewport height */
+        }
+        body {
+            height: 100vh; /* Constrain to viewport height */
+            display: flex;
+            flex-direction: column;
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0413; /* Very dark background */
+            color: #b9f155; /* Greenish text */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0c0413; /* Very dark background */
@@ -154,6 +174,10 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        .loading-messages {
+            color: #6e548e;
+            white-space: nowrap;
+        }
 
         /* Dropdown styling */
         .dropdown { position: relative; display: inline-block; }
@@ -163,7 +187,7 @@
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.4);
             z-index: 10; border-radius: 6px;
             border: 1px solid #231b2e; padding: 4px 0;
-            right: 0; /* Align to the right */
+            right: 0; /* Align to the right */ top: -4px;
             margin-top: 4px;
         }
         .dropdown-content button {
@@ -176,28 +200,65 @@
         .dropdown-content button:hover { background-color: #2a1d3a; }
         .dropdown:hover .dropdown-content { display: block; }
 
+        /* About dropdown styling */
+        .about-dropdown { position: relative; display: inline-block; }
+        .about-dropdown-content {
+            display: none; position: absolute;
+            background-color: #1a0d27; min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.4);
+            z-index: 10; border-radius: 6px;
+            border: 1px solid #231b2e; padding: 4px 0;
+            right: 0; /* Align to the right */ top: -4px;
+            margin-top: 4px;
+        }
+        .about-dropdown:hover .about-dropdown-content { display: block; }
     </style>
 </head>
-<body class="flex h-screen flex-col">
+    <header class="bg-[#1a0d27] p-2 md:p-3 shadow-md flex justify-between items-center text-white flex-shrink-0">
+        <div id="toggleSidebarBtn" class="hamburger md:hidden p-2 mr-2" title="Toggle Sidebar">
+          <div class="w-6 h-0.5 bg-white my-1"></div>
+          <div class="w-6 h-0.5 bg-white my-1"></div>
+          <div class="w-6 h-0.5 bg-white my-1"></div>
+        </div>
 
-    <header class="bg-[#1a0d27] p-3 shadow-md flex justify-between items-center text-white flex-shrink-0">
-        <button id="toggleSidebarBtn" class="md:hidden p-2 rounded-full hover:bg-gray-700 mr-2" title="Toggle Sidebar">
-            <i class="lucide lucide-menu"></i>
-        </button>
-
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-2 flex-1">
              <i id="channelIcon" class="lucide lucide-globe text-xl text-[#b9f155]"></i>
              <h1 id="channelTitle" class="text-xl font-bold">Global Feed</h1>
-        </div>
-        <div class="flex items-center space-x-4">
-            <div id="connectionStatusContainer" class="flex items-center space-x-1 text-xs text-gray-400" title="Relay Connection Status">
-                 <i id="connectionIcon" class="lucide lucide-wifi-off"></i>
-                 <span id="connectionStatus">Disconnected</span>
+             <div class="about-dropdown">
+                <button id="aboutButton" class="p-2 rounded-full hover:bg-gray-700" title="About n_cord">
+                    ⚙️
+                </button>
+                <div id="aboutDropdownContent" class="about-dropdown-content">
+                    <button id="aboutLink" class="block text-white px-4 py-2 hover:bg-gray-700">About</button>
+                </div>
             </div>
-             <button id="manageRelaysBtn" class="p-2 rounded-full hover:bg-gray-700" title="Manage Relays">
-                <i class="lucide lucide-settings"></i>
+            <script>
+                const aboutButton = document.getElementById('aboutButton');
+                const aboutLink = document.getElementById('aboutLink');
+                const aboutDropdownContent = document.getElementById('aboutDropdownContent');
+                let aboutButtonClicked = false;
+                aboutLink.addEventListener('click', () => {
+                    window.open('https://github.com/0n4t3/n_cord/', '_blank');
+                });
+                aboutButton.addEventListener('click', (event) => {
+                    if (window.innerWidth < 768) {
+                        event.preventDefault();
+                        if (aboutButtonClicked) window.open('https://github.com/0n4t3/n_cord/', '_blank');
+                        aboutButtonClicked = !aboutButtonClicked;
+                    }
+                });
+
+            </script>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button id="manageRelaysBtn" class="p-2 rounded-full hover:bg-gray-700" title="Manage Relays">
+                ⇆
             </button>
-            <div id="userInfo" class="flex items-center space-x-2 hidden">
+            <div id="connectionStatusContainer" class="flex items-center space-x-1 text-xs text-gray-400" title="Relay Connection Status">
+                <i id="connectionIcon" class="lucide lucide-wifi-off"></i>
+                <span id="connectionStatus">Disconnected</span>
+            </div>
+            <div id="userInfo" class="flex items-center space-x-2 hidden ml-2">
                 <img id="userAvatar" src="https://placehold.co/40x40/9147ff/ffffff?text=?" alt="User Avatar" class="w-8 h-8 rounded-full object-cover avatar">
                 <span id="userName" class="text-sm font-medium">Not Logged In</span>
                 <button id="logoutBtn" class="p-1 rounded-full hover:bg-red-700 text-xs btn-danger" title="Logout">
@@ -216,11 +277,11 @@
     </header>
 
     <div class="flex flex-1 overflow-hidden">
-        <aside id="sidebar" class="w-64 bg-[#1a0d27] p-4 overflow-y-auto flex-shrink-0 flex flex-col">
+        <aside id="sidebar" class="w-64 bg-[#1a0d27] p-4 overflow-y-auto flex-shrink-0 flex flex-col md:flex">
             <h2 class="text-lg font-semibold mb-4 text-gray-300">Channels</h2>
             <nav id="channelList" class="space-y-1 mb-4 flex-1">
                 <div id="channel-global" class="channel-item active" onclick="selectChannel('global')">
-                    <i class="lucide lucide-globe"></i>
+                    <span class="text-xl">𓅦</span>
                     <span>Global Feed</span>
                 </div>
                 </nav>
@@ -229,14 +290,14 @@
                  <div class="flex space-x-2">
                     <input type="text" id="addHashtagInput" class="flex-1 px-3 py-1.5 text-sm" placeholder="e.g., nostr">
                     <button id="addHashtagBtn" class="btn-primary p-2" title="Add Hashtag">
-                        <i class="lucide lucide-plus"></i>
+                        +
                     </button>
                  </div>
             </div>
         </aside>
 
         <main class="flex-1 flex flex-col bg-[#0c0413] overflow-hidden">
-            <div class="px-4 pt-3 pb-1 border-b border-gray-700 flex justify-end">
+            <div class="px-4 pt-2 pb-1 border-b border-gray-700 flex justify-end">
                 <div class="dropdown">
                     <button id="filterBtn" class="btn-secondary text-sm px-3 py-1 inline-flex items-center">
                         <span id="filterLabel">Global Messages</span>
@@ -250,10 +311,10 @@
             </div>
 
             <div id="messageContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <div class="text-center text-gray-500 pt-10">Connecting to relays...</div>
+                <div class="text-center text-gray-500 pt-10 loading-messages">Connecting to relays...</div>
             </div>
 
-            <div class="bg-[#1a0d27] p-4 flex items-center flex-shrink-0 border-t border-gray-700">
+            <div class="bg-[#1a0d27] p-2 md:p-4 flex items-center flex-shrink-0 border-t border-gray-700">
                 <input type="text" id="messageInput" class="flex-1 px-4 py-2 mr-3 focus:outline-none" placeholder="Type your message..." disabled>
                 <button id="sendBtn" class="btn-primary font-bold py-2 px-4 rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center" disabled>
                      <i class="lucide lucide-send mr-1"></i> Send
@@ -360,7 +421,7 @@
         const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
         const filterLabel = document.getElementById('filterLabel');
         const followingFilterBtn = document.getElementById('followingFilterBtn');
-
+        const connectionStatusContainerHeader = document.getElementById('connectionStatusContainer');
 
         // --- Storage Keys ---
         const STORAGE_KEY_RELAYS = 'nostrRelays';
@@ -562,7 +623,7 @@
         // --- Relay Management ---
         function saveRelaysToStorage() { /* ... (no changes needed) ... */
             localStorage.setItem(STORAGE_KEY_RELAYS, JSON.stringify(relays));
-        }
+        }        
 
         function updateRelayListUI() { /* ... (updated to populate modal list) ... */
             if (!modalRelayList) return;
@@ -579,7 +640,7 @@
                 const isConnecting = ws && ws.readyState === WebSocket.CONNECTING;
                 let statusColor = 'text-red-400'; let statusIcon = 'lucide-x-circle'; let title = 'Disconnected';
 
-                if (isConnected) { statusColor = 'text-green-400'; statusIcon = 'lucide-check-circle'; title = 'Connected'; }
+                if (isConnected) { statusColor = 'text-green-400'; title = 'Connected'; }
                 else if (isConnecting) { statusColor = 'text-yellow-400'; statusIcon = 'lucide-loader-2 animate-spin'; title = 'Connecting...'; }
 
                 const li = document.createElement('div'); // Use div for better layout control
@@ -621,12 +682,12 @@
             }
 
             connectionStatus.textContent = statusText;
-            connectionStatusContainer.className = `flex items-center space-x-1 text-xs ${statusClass} mr-2`;
+            connectionStatusContainer.className = `flex items-center space-x-1 text-xs ${statusClass}`;
             connectionIcon.className = `lucide ${iconClass}`;
         }
         function connectToRelays() { /* ... (updated to call subscribeToFeed) ... */
             disconnectAllRelays();
-            messageContainer.innerHTML = '<div class="text-center text-gray-500 pt-10">Connecting to relays...</div>';
+            messageContainer.innerHTML = '<div class="text-center text-gray-500 pt-10 loading-messages">Connecting to relays...</div>';
 
             if (relays.length === 0) {
                 showError("No relays configured. Please add relays in the settings modal.");
@@ -654,7 +715,7 @@
                     // If this is the *first* connection established, subscribe to the feed
                     if (Array.from(connectedRelays.values()).filter(w => w.readyState === WebSocket.OPEN).length === 1) {
                          if (messageContainer.innerHTML.includes('Connecting to relays...')) {
-                             messageContainer.innerHTML = ''; // Clear connecting message
+                             messageContainer.querySelector('.loading-messages').remove(); // Clear connecting message
                          }
                          subscribeToFeed(); // Initial subscription based on current channel/filter
                     } else {
@@ -909,7 +970,7 @@
             const messageId = `note-${event.id}`;
 
             const profileData = profilesCache.get(event.pubkey);
-            const nip05 = profileData?.nip05;
+            const nip05 = profileData?.nip05;            
             const displayName = nip05 ? `${profile.name} <span class="text-gray-400">(${nip05})</span>` : profile.name;
 
             const npub = window.NostrTools.nip19.npubEncode(event.pubkey);
@@ -928,14 +989,14 @@
             const fullTimestamp = timestamp.toLocaleString();
 
             let contentHTML = sanitizeHTML(event.content); // Use basic sanitizer
-            
+
             // Add reply button
             const replyButton = `<button class="reply-button text-gray-400 hover:text-blue-400 text-xs ml-2" onclick="replyToMessage('${event.id}', '${event.pubkey}')">Reply</button>`;
-            
+
             contentHTML = formatContent(contentHTML); // Format links, etc.
 
             messageDiv.innerHTML = `
-                <div class="flex-shrink-0 mr-3">
+                <div class="flex-shrink-0 mr-3">                    
                     <img src="${profile.picture}" alt="${profile.name.substring(0, 1)}" class="avatar-img w-10 h-10 rounded-full object-cover avatar" onerror="this.onerror=null; this.src='https://placehold.co/40x40/9147ff/ffffff?text=${event.pubkey.substring(0, 2)}';">
                 </div>
                 <div class="flex-1 overflow-hidden"> <div class="flex items-baseline space-x-2">
@@ -969,8 +1030,9 @@
              // Scroll logic (optional - might be annoying if loading old messages)
              // const isScrolledToBottom = messageContainer.scrollHeight - messageContainer.clientHeight <= messageContainer.scrollTop + 150;
              // if (isScrolledToBottom) messageContainer.scrollTop = messageContainer.scrollHeight;
+            messageContainer.scrollTop = messageContainer.scrollHeight;
         }
-        
+
         function replyToMessage(eventId, pubkey) {
             const npub = window.NostrTools.nip19.npubEncode(pubkey);
             const nevent = window.NostrTools.nip19.neventEncode({ id: eventId, relays: [] });
@@ -1017,10 +1079,28 @@
             if (!userPubKey || !loginMethod) { showError("Please log in first."); return; }
 
             sendBtn.disabled = true; sendBtn.innerHTML = '<i class="lucide lucide-loader-2 animate-spin mr-1"></i> Sending...';
-
+            
             let tags = [];
             // Add hashtag if currently in a hashtag channel
             if (currentChannel.startsWith('#')) {
+                const tagName = currentChannel.substring(1);
+                tags.push(["t", tagName]); // Add NIP-10 topic tag
+            }
+
+            // Check if the message is a reply
+            const replyMatch = content.match(/nostr:nevent1[a-z0-9]+/g);
+            const mentionMatch = content.match(/nostr:npub1[a-z0-9]+/g);
+            if (replyMatch && replyMatch.length > 0 && mentionMatch && mentionMatch.length > 0) {
+                const nevent = replyMatch[0].replace('nostr:', '');
+                const npub = mentionMatch[0].replace('nostr:', '');
+                const { data: { id: eventId, relays: eventRelays } } = window.NostrTools.nip19.decode(nevent);
+                const { data: pubkey } = window.NostrTools.nip19.decode(npub);
+                tags.push(["e", eventId]);
+                tags.push(["p", pubkey]);
+                if (eventRelays && eventRelays.length > 0) {
+                    eventRelays.forEach(relay => tags.push(["e", eventId, relay]));
+                }
+            } else if (currentChannel.startsWith('#')) {
                 const tagName = currentChannel.substring(1);
                 tags.push(["t", tagName]); // Add NIP-10 topic tag
             }
@@ -1048,7 +1128,7 @@
         // --- Subscriptions & Filtering ---
         function subscribeToFeed() { /* ... (New central subscription logic) ... */
             console.log(`Subscribing to feed. Channel: ${currentChannel}, Filter: ${currentFilterMode}`);
-            messageContainer.innerHTML = `<div class="text-center text-gray-500 pt-10">Loading ${currentChannel === 'global' ? 'messages' : currentChannel}...</div>`; // Show loading state
+            messageContainer.innerHTML = `<div class="text-center text-gray-500 pt-10 loading-messages">Loading ${currentChannel === 'global' ? 'messages' : currentChannel}...</div>`; // Show loading state
             eventsCache.clear(); // Clear cache for new feed
 
             let filters = [{
@@ -1074,6 +1154,7 @@
                      console.warn("Filtering by 'following', but follow list is empty.");
                      // Show a message indicating empty follow list?
                      messageContainer.innerHTML = '<div class="text-center text-gray-500 pt-10">Your following feed is empty. Follow some people!</div>';
+                     messageContainer.querySelector('.loading-messages').remove();
                      // Send an empty subscription to avoid errors, or don't subscribe?
                      // For now, send the request, it will just return nothing.
                      filters[0].authors = []; // Empty array means no authors match
@@ -1092,6 +1173,10 @@
 
             const subId = `main-feed-${generateSubId()}`;
             subscribe(subId, filters); // Use the central subscribe function
+
+            if (messageContainer.querySelector('.loading-messages')) {
+                messageContainer.querySelector('.loading-messages').remove();
+            }
         }
 
         function setFilterMode(mode) { /* ... (New function) ... */
@@ -1134,7 +1219,7 @@
                  div.className = 'channel-item hashtag-channel flex justify-between items-center'; // Added flex for delete button
                  div.onclick = () => selectChannel(`#${tag}`);
                  div.innerHTML = `
-                     <div class="flex items-center gap-2 overflow-hidden"> <i class="lucide lucide-hash"></i>
+                     <div class="flex items-center gap-2 overflow-hidden"> <span class="text-xl">𓅦</span>
                          <span class="truncate">${tag}</span>
                      </div>
                      <button class="text-gray-500 hover:text-red-400 p-1 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation(); removeHashtag('${tag}');" title="Remove #${tag}">
@@ -1190,10 +1275,10 @@
         }
         function updateChannelHeader() { /* ... (New function) ... */
              if (currentChannel === 'global') {
-                 channelIcon.className = 'lucide lucide-globe text-xl text-[#b9f155]';
+                 channelIcon.innerHTML = '<span class="text-xl">𓅦</span>';
                  channelTitle.textContent = 'Global Feed';
              } else {
-                 channelIcon.className = 'lucide lucide-hash text-xl text-[#b9f155]';
+                 channelIcon.innerHTML = '<span class="text-xl">𓅦</span>';
                  channelTitle.textContent = currentChannel; // Display #hashtag
              }
         }
@@ -1201,6 +1286,7 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('hidden');
+            connectionStatusContainerHeader.classList.toggle('hidden');
         }
 
 
