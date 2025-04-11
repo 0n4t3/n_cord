@@ -12,45 +12,16 @@
     <meta name="theme-color" content="#0c0413">
 
     <style>
-      .hamburger {
-        display: inline-block;
-        cursor: pointer;
-      }
-      @font-face {
-        font-family: 'LucideIcons';
-        src: url(https://cdn.jsdelivr.net/npm/lucide-static@latest/font/Lucide.ttf) format('truetype');
-      }
-      .lucide {
-        font-family: 'LucideIcons';
-        font-style: normal;
-        font-weight: normal;
-        font-variant: normal;
-        text-rendering: auto;
-        line-height: 1;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-      /* Specific icon mappings (add more as needed) */
-      .lucide-settings:before { content: "\0ed4"; }
-      .lucide-log-out:before { content: "\0e34"; }
-      .lucide-alert-triangle:before { content: "\0cce"; }
-      .lucide-x-circle:before { content: "\0f38"; }
-      .lucide-check-circle:before { content: "\0d4a"; }
-      .lucide-loader-2:before { content: "\0e32"; }
-      .lucide-hash:before { content: "\0e04"; }
-      .lucide-globe:before { content: "\0df9"; }
-      .lucide-users:before { content: "\0f3b"; }
-      .lucide-wifi:before { content: "\0f31"; }
-      .lucide-wifi-off:before { content: "\0f32"; }
-      .lucide-plus:before { content: "\0ea0"; }
-      .lucide-trash-2:before { content: "\0f1b"; }
-      .lucide-chevron-down:before { content: "\0d56"; }
-      .lucide-send:before { content: "\0ec9"; }
     </style>
     <script src="https://unpkg.com/nostr-tools@1/lib/nostr.bundle.js"></script>
     <style>
         /* Custom scrollbar for webkit browsers */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
+        .fullscreen-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
         ::-webkit-scrollbar-track { background: #231b2e; }
         ::-webkit-scrollbar-thumb { background: #120b1c; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #0b0610; }
@@ -156,18 +127,12 @@
             transition: background-color 0.15s ease;
             display: flex;
             align-items: center;
-            gap: 8px; /* space between icon and text */
-        }
-        .channel-item:hover {
             background-color: #2a1d3a;
         }
         .channel-item.active {
             background-color: #3f2b55;
             color: #ffffff;
             font-weight: 500;
-        }
-        .channel-item .lucide {
-            flex-shrink: 0; /* Prevent icon from shrinking */
         }
         .channel-item span {
             overflow: hidden;
@@ -217,7 +182,7 @@
     <header class="bg-[#1a0d27] p-2 md:p-3 shadow-md flex justify-between items-center text-white flex-shrink-0">
         <div id="toggleSidebarBtn" class="hamburger md:hidden p-2 mr-2" title="Toggle Sidebar">
           <div class="w-6 h-0.5 bg-white my-1"></div>
-          <div class="w-6 h-0.5 bg-white my-1"></div>
+          <div class="w-6 h-0.5 bg-white my-1"></div>          
           <div class="w-6 h-0.5 bg-white my-1"></div>
         </div>
 
@@ -255,7 +220,7 @@
                 ⇆
             </button>
             <div id="connectionStatusContainer" class="flex items-center space-x-1 text-xs text-gray-400" title="Relay Connection Status">
-                <i id="connectionIcon" class="lucide lucide-wifi-off"></i>
+                <span id="connectionIcon">📶</span>
                 <span id="connectionStatus">Disconnected</span>
             </div>
             <div id="userInfo" class="flex items-center space-x-2 hidden ml-2">
@@ -263,7 +228,7 @@
                 <span id="userName" class="text-sm font-medium">Not Logged In</span>
                 <button id="logoutBtn" class="p-1 rounded-full hover:bg-red-700 text-xs btn-danger" title="Logout">
                     <i class="lucide lucide-log-out"></i>
-                </button>
+                </button>                
             </div>
             <div id="loginOptions" class="flex items-center space-x-2">
                  <button id="loginExtBtn" class="btn-primary font-bold py-2 px-4 rounded-lg shadow text-sm">
@@ -282,7 +247,7 @@
             <nav id="channelList" class="space-y-1 mb-4 flex-1">
                 <div id="channel-global" class="channel-item active" onclick="selectChannel('global')">
                     <span class="text-xl">𓅦</span>
-                    <span>Global Feed</span>
+                    <span class="ml-2"> Global Feed</span>
                 </div>
                 </nav>
             <div class="mt-auto pt-4 border-t border-gray-700">
@@ -301,7 +266,7 @@
                 <div class="dropdown">
                     <button id="filterBtn" class="btn-secondary text-sm px-3 py-1 inline-flex items-center">
                         <span id="filterLabel">Global Messages</span>
-                        <i class="lucide lucide-chevron-down ml-1"></i>
+                        <span class="ml-1">▼</span>
                     </button>
                     <div id="filterDropdownContent" class="dropdown-content">
                         <button onclick="setFilterMode('global')">Global Messages</button>
@@ -317,7 +282,7 @@
             <div class="bg-[#1a0d27] p-2 md:p-4 flex items-center flex-shrink-0 border-t border-gray-700">
                 <input type="text" id="messageInput" class="flex-1 px-4 py-2 mr-3 focus:outline-none" placeholder="Type your message..." disabled>
                 <button id="sendBtn" class="btn-primary font-bold py-2 px-4 rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center" disabled>
-                     <i class="lucide lucide-send mr-1"></i> Send
+                     <span>➤</span> Send
                 </button>
             </div>
         </main>
@@ -345,7 +310,7 @@
             <h2 class="text-2xl font-bold mb-4 text-white">Login with Private Key</h2>
             <div class="warning-text">
                 <i class="lucide lucide-alert-triangle inline-block mr-1"></i>
-                <strong>Warning:</strong> Pasting your private key (nsec) is less secure. Use an extension if possible. Key stored in memory only.
+                <strong>Warning:</strong> Pasting your private key (nsec) is less secure. Use an extension if possible. Key stored in memory only.                
             </div>
             <div class="mb-4">
                 <label for="privateKeyInput" class="block text-sm font-medium text-gray-300 mb-1">Private Key (nsec)</label>
@@ -639,15 +604,15 @@
                 const isConnected = ws && ws.readyState === WebSocket.OPEN;
                 const isConnecting = ws && ws.readyState === WebSocket.CONNECTING;
                 let statusColor = 'text-red-400'; let statusIcon = 'lucide-x-circle'; let title = 'Disconnected';
-
+                let icon = '❌';
                 if (isConnected) { statusColor = 'text-green-400'; title = 'Connected'; }
-                else if (isConnecting) { statusColor = 'text-yellow-400'; statusIcon = 'lucide-loader-2 animate-spin'; title = 'Connecting...'; }
+                else if (isConnecting) { statusColor = 'text-yellow-400'; icon = '🔄'; title = 'Connecting...'; }
 
                 const li = document.createElement('div'); // Use div for better layout control
                 li.className = `flex items-center justify-between text-sm ${statusColor} py-1`;
                 li.title = `${url} - ${title}`;
                 li.innerHTML = `
-                    <span class="truncate flex-1 mr-2">${url.replace('wss://', '').replace(/\/$/, '')}</span>
+                    <span class="truncate flex-1 mr-2">${url.replace('wss://', '').replace(/\/$/, '')}</span>                    
                     <i class="lucide ${statusIcon} ml-1 flex-shrink-0"></i>
                 `;
                 modalRelayList.appendChild(li);
@@ -659,22 +624,21 @@
             const connectingCount = Array.from(connectedRelays.values()).filter(ws => ws.readyState === WebSocket.CONNECTING).length;
             const totalRelays = relays.length;
 
-            let statusText = '';
+            let statusText = '';            
             let statusClass = 'text-gray-400';
-            let iconClass = 'lucide-wifi-off';
+            let icon = '📶';
 
             if (connectedCount > 0) {
                 statusText = `Connected (${connectedCount}/${totalRelays})`;
                 statusClass = 'text-green-400';
-                iconClass = 'lucide-wifi';
+                icon = '📶';
             } else if (connectingCount > 0) {
                  statusText = `Connecting... (${connectingCount}/${totalRelays})`;
                  statusClass = 'text-yellow-400';
-                 iconClass = 'lucide-loader-2 animate-spin';
+                 icon = '🔄';
             } else if (totalRelays > 0) {
                 statusText = `Disconnected`;
-                statusClass = 'text-red-400';
-                iconClass = 'lucide-wifi-off';
+                statusClass = 'text-red-400';                
             } else {
                 statusText = 'No Relays';
                 statusClass = 'text-gray-500';
@@ -683,7 +647,7 @@
 
             connectionStatus.textContent = statusText;
             connectionStatusContainer.className = `flex items-center space-x-1 text-xs ${statusClass}`;
-            connectionIcon.className = `lucide ${iconClass}`;
+            connectionIcon.textContent = icon;
         }
         function connectToRelays() { /* ... (updated to call subscribeToFeed) ... */
             disconnectAllRelays();
@@ -991,6 +955,21 @@
             let contentHTML = sanitizeHTML(event.content); // Use basic sanitizer
 
             // Add reply button
+            contentHTML = contentHTML.replace(/(https?:\/\/[^\s]+)/g, (match) => {
+                const lowerCaseMatch = match.toLowerCase();
+                if (lowerCaseMatch.endsWith('.jpg') || lowerCaseMatch.endsWith('.jpeg') || lowerCaseMatch.endsWith('.png') || lowerCaseMatch.endsWith('.avif') || lowerCaseMatch.endsWith('.webp')) {
+                    return `<img src="${match}" alt="Image" class="max-w-full max-h-96 rounded-lg my-2 cursor-pointer" loading="lazy" onclick="openFullscreen('${match}')">`;
+                } else if (lowerCaseMatch.endsWith('.mp4')) {
+                    return `<video controls class="max-w-full max-h-96 rounded-lg my-2 cursor-pointer" loading="lazy" onclick="openFullscreen('${match}')">
+                                <source src="${match}" type="video/mp4" >
+                                Your browser does not support the video tag.
+                            </video>`;
+                } else {
+                    return `<a href="${match}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">${match}</a>`;
+                }
+            });
+
+
             const replyButton = `<button class="reply-button text-gray-400 hover:text-blue-400 text-xs ml-2" onclick="replyToMessage('${event.id}', '${event.pubkey}')">Reply</button>`;
 
             contentHTML = formatContent(contentHTML); // Format links, etc.
@@ -1032,6 +1011,18 @@
              // if (isScrolledToBottom) messageContainer.scrollTop = messageContainer.scrollHeight;
             messageContainer.scrollTop = messageContainer.scrollHeight;
         }
+        function openFullscreen(url) {
+            const modal = document.createElement('div');
+            modal.className = 'fullscreen-modal fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80';
+            modal.onclick = () => modal.remove();
+            if (url.endsWith('.mp4')) {
+                modal.innerHTML = `<video src="${url}" controls class="max-w-full max-h-screen"></video>`;
+            } else {
+                modal.innerHTML = `<img src="${url}" class="max-w-full max-h-screen">`;
+            }
+            document.body.appendChild(modal);
+        }
+
 
         function replyToMessage(eventId, pubkey) {
             const npub = window.NostrTools.nip19.npubEncode(pubkey);
@@ -1079,7 +1070,7 @@
             if (!userPubKey || !loginMethod) { showError("Please log in first."); return; }
 
             sendBtn.disabled = true; sendBtn.innerHTML = '<i class="lucide lucide-loader-2 animate-spin mr-1"></i> Sending...';
-            
+
             let tags = [];
             // Add hashtag if currently in a hashtag channel
             if (currentChannel.startsWith('#')) {
@@ -1121,7 +1112,7 @@
                 showError(`Failed to send: ${error.message}`);
             } finally {
                  sendBtn.disabled = false; sendBtn.innerHTML = '<i class="lucide lucide-send mr-1"></i> Send';
-                 messageInput.focus();
+                 messageInput.focus();                 
             }
         }
 
@@ -1224,7 +1215,7 @@
                      </div>
                      <button class="text-gray-500 hover:text-red-400 p-1 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation(); removeHashtag('${tag}');" title="Remove #${tag}">
                         <i class="lucide lucide-trash-2 text-xs"></i>
-                     </button>
+                     </button>                     
                  `;
                  // Add group class for hover effect on delete button
                  div.classList.add('group');
@@ -1276,7 +1267,7 @@
         function updateChannelHeader() { /* ... (New function) ... */
              if (currentChannel === 'global') {
                  channelIcon.innerHTML = '<span class="text-xl">𓅦</span>';
-                 channelTitle.textContent = 'Global Feed';
+                 channelTitle.textContent = ' Global Feed';                 
              } else {
                  channelIcon.innerHTML = '<span class="text-xl">𓅦</span>';
                  channelTitle.textContent = currentChannel; // Display #hashtag
