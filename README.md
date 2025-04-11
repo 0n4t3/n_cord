@@ -1,14 +1,14 @@
 # n_cord
 A Nostr powered Discord &amp; IRC inspired client.
 
+*Prefer Actiivty Pub? Try [m_cord](https://github.com/0n4t3/m_cord/)*
+
 Try it at [0n4t3.github.io/n_cord](https://0n4t3.github.io/n_cord/)
 
 ![screenshot](https://raw.githubusercontent.com/0n4t3/n_cord/refs/heads/main/screenshot.avif)
 
-*This project is vibe coded, abanden all hope of stability ye who enter here.*
+*This project is vibe coded, abandon all hope of stability ye who enter here.*
 
-I decided to give vibe coding a try, this is what I wound up with. Honestly it's not too bad all things considered, it's a Nostr client that has a chatroom style layout, allowing you to subscribe to "chatrooms" (hashtags) or just view your following in a chatroom style layout. You can sign in with a Nostr signing extension like Nos2x - which is HIGHLY recommended for account security given aforementioned vibe coding.
+n_cord is a Nostr client with a UI inspired by Discord and functionality inspired by IRC. It has a chat style layout for posts, allows you to subscribe to "channels" (tags), and allows you to view all posts or only posts by those you follow. Adding a tag as a channel does NOT subscribe your account to that tag, so you can keep tabs on high volume tags without filling up your home feed. It's possible to sign in with either a key or a signing extension, and it can also function fine without signing in if you just want to see what the community is talking about on a specific tag.
 
-The client itself is a single static HTML file tuned up with some javascript and CSS. The server doesn't do anything aside from serve the file, everything else happens within the browser itself, and it can be served as a static site through something like an Apache server or Github pages.
-
-It could probably use a little more polish, which I do plan to implement, though long term support isn't fully garunteed as it was more so of an "I want to try vibe coding" then a "I want to make this service."
+It's probably not going to become your next main - there's no support for DMs, no notifications, and it supports a relatively limited number of NIPs. Instead, it works great when paired with a more standard client, letting you browse various tags and post basic messages from within a fairly minimalist web app. The web app itself is a single static HTML file, all functions being performed within your web browser itself, and I collect no data on anything that you do. If you wish to host it yourself it's as simple as downloading **index.html** and placing it on any server or host.
