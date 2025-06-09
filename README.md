@@ -1,11 +1,14 @@
 # n_cord
+
+![screenshot](https://raw.githubusercontent.com/0n4t3/n_cord/refs/heads/main/screenshot.avif)
+
 A Nostr powered Discord &amp; IRC inspired client.
 
 *Prefer Actiivty Pub? Try [m_cord](https://github.com/0n4t3/m_cord/)*
 
 Try it at [0n4t3.github.io/n_cord](https://0n4t3.github.io/n_cord/)
 
-![screenshot](https://raw.githubusercontent.com/0n4t3/n_cord/refs/heads/main/screenshot.avif)
+![screenshot](https://raw.githubusercontent.com/0n4t3/n_cord/refs/heads/main/screenshot2.avif)
 
 *This project is vibe coded, abandon all hope of stability ye who enter here.*
 
