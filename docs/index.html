@@ -1024,7 +1024,6 @@
         // --- Profile & Follow List Handling ---
         function fetchFollowList() { /* ... (New function) ... */
              if (!authManager.isLoggedIn) return;
-             console.log("Fetching follow list (Kind 3) for user:", shortenPubKey(authManager.publicKey));
              const subId = `follows-${generateSubId()}`;
              const filters = [{
                  kinds: [3], // Follow list event

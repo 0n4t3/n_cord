@@ -437,13 +437,21 @@ class AuthManager {
     async fetchFollowList() {
         if (!this.publicKey) return;
 
+        // Check if any relays are connected
+        const connectedCount = Array.from(window.connectedRelays.values()).filter(ws => ws.readyState === WebSocket.OPEN).length;
+        if (connectedCount === 0) {
+            // Retry after 2 seconds if no relays are connected
+            setTimeout(() => this.fetchFollowList(), 2000);
+            return;
+        }
+
         const followListFilter = {
             authors: [this.publicKey],
             kinds: [3],
             limit: 1
         };
 
-        const subscriptionId = window.generateSubId();
+        const subscriptionId = `follows-${window.generateSubId()}`;
         const message = ["REQ", subscriptionId, followListFilter];
 
         window.connectedRelays.forEach((ws) => {
@@ -452,24 +460,18 @@ class AuthManager {
             }
         });
 
-        // Set up temporary listener for follow list
-        const tempHandler = (event) => {
-            if (event.detail?.subscriptionId === subscriptionId && event.detail?.event?.kind === 3) {
-                this.processFollowList(event.detail.event);
-                // Clean up
-                setTimeout(() => {
-                    const closeMessage = ["CLOSE", subscriptionId];
-                    window.connectedRelays.forEach((ws) => {
-                        if (ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify(closeMessage));
-                        }
-                    });
-                    document.removeEventListener('nostrEvent', tempHandler);
-                }, 1000);
-            }
-        };
+        // The follow list will be processed through the existing handleTemporarySubscriptionEvent 
+        // which calls processFollowListEvent in index.html, which then syncs with authManager.follows
 
-        document.addEventListener('nostrEvent', tempHandler);
+        // Auto-close subscription after 5 seconds
+        setTimeout(() => {
+            const closeMessage = ["CLOSE", subscriptionId];
+            window.connectedRelays.forEach((ws) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(closeMessage));
+                }
+            });
+        }, 5000);
     }
 
     // Process follow list from Kind 3 event
@@ -489,7 +491,11 @@ class AuthManager {
         // Fetch profiles of followed users
         if (this.follows.size > 0) {
             const followedPubkeys = Array.from(this.follows).slice(0, 100); // Limit for performance
-            fetchProfiles(followedPubkeys);
+            if (typeof fetchProfiles === 'function') {
+                fetchProfiles(followedPubkeys);
+            } else if (window.profileUtils) {
+                window.profileUtils.fetchProfiles(followedPubkeys);
+            }
         }
     }
 
