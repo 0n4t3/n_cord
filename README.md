@@ -1,6 +1,6 @@
 # n_cord
 
-![screenshot](https://raw.githubusercontent.com/0n4t3/n_cord/refs/heads/main/screenshot.avif)
+![screenshot](https://raw.githubusercontent.com/0n4t3/n_cord/refs/heads/main/screenshot1.avif)
 
 A Nostr powered Discord &amp; IRC inspired client.
 
