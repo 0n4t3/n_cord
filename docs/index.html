@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>n_cord</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0c0413">
+
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/nostr-tools@1/lib/nostr.bundle.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/profile-utils.js"></script>
+    <script src="js/channel-manager.js"></script>
+    <script src="js/login-modal.js"></script>
+    <script src="js/init.js"></script>
+</head>
+    <header class="bg-[#1a0d27] p-2 md:p-3 shadow-md flex justify-between items-center text-white flex-shrink-0">
+        <div id="toggleSidebarBtn" class="hamburger md:hidden p-2 mr-2" title="Toggle Sidebar">
+          <div class="w-6 h-0.5 bg-white my-1"></div>
+          <div class="w-6 h-0.5 bg-white my-1"></div>
+          <div class="w-6 h-0.5 bg-white my-1"></div>
+        </div>
+
+        <div class="flex items-center space-x-2 flex-1">
+             <i id="channelIcon" class="lucide lucide-globe text-xl text-[#b9f155]"></i>
+             <h1 id="channelTitle" class="text-xl font-bold">Global Feed</h1>
+             <div class="about-dropdown">
+                <button id="aboutButton" class="p-2 rounded-full hover:bg-gray-700" title="About n_cord">
+                    ⚙️
+                </button>
+                <div id="aboutDropdownContent" class="about-dropdown-content">
+                    <button id="aboutLink" class="block text-white px-4 py-2 hover:bg-gray-700 text-center w-full">About</button>
+                    <button id="blockedUsersBtn" class="block text-white px-4 py-2 hover:bg-gray-700">Blocked Users</button>
+                    <button id="enterToggleBtn" class="block text-white px-4 py-2 hover:bg-gray-700 flex items-center justify-between">
+                        <span>Enter creates new line</span>
+                        <input type="checkbox" id="enterToggleCheckbox" class="ml-2 accent-purple-500" readonly>
+                    </button>
+                </div>
+            </div>
+            <script>
+                const aboutButton = document.getElementById('aboutButton');
+                const aboutLink = document.getElementById('aboutLink');
+                const aboutDropdownContent = document.getElementById('aboutDropdownContent');
+                
+                aboutLink.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    window.open('https://github.com/0n4t3/n_cord/', '_blank');
+                    // Close dropdown after clicking on mobile
+                    if (window.innerWidth < 768) {
+                        aboutDropdownContent.classList.remove('show');
+                    }
+                });
+                
+                aboutButton.addEventListener('click', (event) => {
+                    if (window.innerWidth < 768) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        // On mobile, just toggle the dropdown visibility
+                        aboutDropdownContent.classList.toggle('show');
+                    }
+                });
+
+                // Close dropdown when clicking outside on mobile
+                document.addEventListener('click', (event) => {
+                    if (window.innerWidth < 768 && 
+                        !aboutButton.contains(event.target) && 
+                        !aboutDropdownContent.contains(event.target)) {
+                        aboutDropdownContent.classList.remove('show');
+                    }
+                });
+
+                // Close dropdown when clicking on any dropdown item on mobile
+                aboutDropdownContent.addEventListener('click', (event) => {
+                    if (window.innerWidth < 768) {
+                        // Allow the click to propagate to the actual button, but close dropdown after
+                        setTimeout(() => {
+                            aboutDropdownContent.classList.remove('show');
+                        }, 100);
+                    }
+                });
+
+            </script>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button id="manageRelaysBtn" class="p-2 rounded-full hover:bg-gray-700" title="Manage Relays">
+                ⇆
+            </button>
+            <div id="notificationsContainer" class="notifications-dropdown hidden">
+                <button id="notificationsBtn" class="p-2 rounded-full hover:bg-gray-700 notification-bell" title="Notifications">
+                    🔔
+                    <span id="notificationBadge" class="notification-badge hidden">0</span>
+                </button>
+                <div id="notificationsDropdownContent" class="notifications-dropdown-content">
+                    <div class="p-3 border-b border-gray-600 flex justify-between items-center">
+                        <h3 class="text-sm font-semibold text-white">Notifications</h3>
+                        <button id="markAllReadBtn" class="text-xs text-purple-400 hover:text-purple-300">Mark all read</button>
+                    </div>
+                    <div id="notificationsList" class="max-h-80 overflow-y-auto">
+                        <div class="p-4 text-center text-gray-500 text-sm">No notifications yet</div>
+                    </div>
+                </div>
+            </div>
+            <div id="connectionStatusContainer" class="flex items-center space-x-1 text-xs text-gray-400" title="Relay Connection Status">
+                <span id="connectionIcon">📶</span>
+                <span id="connectionStatus">Disconnected</span>
+            </div>
+            <div id="userInfo" class="flex items-center space-x-2 hidden ml-2">
+                <img id="userAvatar" alt="User Avatar" class="w-8 h-8 rounded-full object-cover avatar cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all" onclick="profileManager.openOwnProfile()" title="View your profile" style="display: none;">
+                <span id="userName" class="text-sm font-medium cursor-pointer hover:text-purple-400 transition-colors" onclick="profileManager.openOwnProfile()" title="View your profile">Not Logged In</span>
+                <button id="logoutBtn" class="p-1 rounded-full hover:bg-red-700 text-xs btn-danger" title="Logout">
+                    <i class="lucide lucide-log-out"></i>
+                </button>
+            </div>
+            <div id="loginOptions" class="flex items-center space-x-2">
+                 <button id="loginBtn" class="btn-primary font-bold py-2 px-4 rounded-lg shadow text-sm">
+                    Login
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <aside id="sidebar" class="w-64 bg-[#1a0d27] p-4 overflow-y-auto flex-shrink-0 flex flex-col md:flex">
+            <h2 class="text-lg font-semibold mb-4 text-gray-300">Channels</h2>
+            <nav id="channelList" class="space-y-1 mb-4 flex-1">
+                <div id="channel-global" class="channel-item active" onclick="selectChannel('global')">
+                    <span class="text-xl">𓅦</span>
+                    <span class="ml-2"> Global Feed</span>
+                </div>
+                </nav>
+            <div class="mt-auto pt-4 border-t border-gray-700">
+                 <label for="addHashtagInput" class="block text-sm font-medium text-gray-400 mb-1">Add Channel</label>
+                 <div class="flex space-x-2">
+                    <input type="text" id="addHashtagInput" class="flex-1 px-3 py-1.5 text-sm" placeholder="e.g., nostr">
+                    <button id="addHashtagBtn" class="btn-primary p-2" title="Add Hashtag">
+                        +
+                    </button>
+                 </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col bg-[#0c0413] overflow-hidden">
+            <div class="px-4 pt-2 pb-1 border-b border-gray-700 flex justify-end">
+                <div class="dropdown">
+                    <button id="filterBtn" class="btn-secondary text-sm px-3 py-1 inline-flex items-center">
+                        <span id="filterLabel">Global Messages</span>
+                        <span class="ml-1">▼</span>
+                    </button>
+                    <div id="filterDropdownContent" class="dropdown-content">
+                        <button onclick="setFilterMode('global')">Global Messages</button>
+                        <button onclick="setFilterMode('following')" id="followingFilterBtn" class="hidden">Following Only</button>
+                        </div>
+                </div>
+            </div>
+
+            <div id="messageContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div class="text-center text-gray-500 pt-10 loading-messages">Connecting to relays...</div>
+            </div>
+
+            <div class="bg-[#1a0d27] p-2 md:p-4 flex items-end flex-shrink-0 border-t border-gray-700">
+                <textarea id="messageInput" class="flex-1 px-4 py-2 mr-3 focus:outline-none resize-none" placeholder="Type your message..." disabled rows="1" style="min-height: 40px; max-height: 120px;"></textarea>
+                <button id="sendBtn" class="btn-primary font-bold py-2 px-4 rounded-lg shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center" disabled>
+                     <span>➤</span> Send
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <div id="relayManagementModal" class="fixed inset-0 z-50 flex items-center justify-center modal hidden">
+        <div class="modal-content p-6 rounded-lg shadow-xl w-full max-w-lg"> <h2 class="text-2xl font-bold mb-4 text-white">Manage Relays</h2>
+            <div class="mb-4">
+                <label for="relayInput" class="block text-sm font-medium text-gray-300 mb-1">Relay URLs (comma-separated)</label>
+                <textarea id="relayInput" rows="4" class="w-full p-2 rounded bg-[#1a0d27] border border-gray-600 text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#9147ff]"></textarea>
+            </div>
+             <h3 class="text-lg font-semibold mb-2 text-gray-300">Connection Status</h3>
+             <div id="modalRelayList" class="space-y-2 max-h-48 overflow-y-auto mb-4 bg-[#1a0d27] p-3 rounded border border-gray-600">
+                 <p class="text-gray-500 text-sm">No relays configured.</p>
+             </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelRelayBtn" class="btn-secondary py-2 px-4 rounded-lg">Cancel</button>
+                <button id="saveRelayBtn" class="btn-primary py-2 px-4 rounded-lg">Save & Reconnect</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="privateKeyModal" class="fixed inset-0 z-50 flex items-center justify-center modal hidden">
+        <div class="modal-content p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-white">Login with Private Key</h2>
+            <div class="warning-text">
+                <i class="lucide lucide-alert-triangle inline-block mr-1"></i>
+                <strong>Warning:</strong> Pasting your private key (nsec) is less secure than using an extension. Only use on trusted devices.
+            </div>
+            <div class="mb-4">
+                <label for="privateKeyInput" class="block text-sm font-medium text-gray-300 mb-1">Private Key (nsec)</label>
+                <input type="password" id="privateKeyInput" class="w-full p-2 rounded focus:outline-none" placeholder="nsec...">
+            </div>
+            <div class="mb-4">
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="persistPrivateKeyCheckbox" class="accent-purple-500">
+                    <span class="text-sm text-gray-300">Remember me (saves session in browser storage)</span>
+                </label>
+                <p class="text-xs text-gray-400 mt-1">⚠️ Only enable this on trusted devices. Your private key will be encrypted and stored locally.</p>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelPrivateKeyBtn" class="btn-secondary py-2 px-4 rounded-lg">Cancel</button>
+                <button id="submitPrivateKeyBtn" class="btn-primary py-2 px-4 rounded-lg">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorDisplay" class="fixed bottom-4 right-4 bg-red-700 text-white p-3 rounded-lg shadow-lg hidden z-60 max-w-sm">
+        <div class="flex justify-between items-center">
+            <span id="errorMessage" class="text-sm"></span>
+            <button onclick="document.getElementById('errorDisplay').classList.add('hidden')" class="ml-2 font-bold text-lg leading-none">&times;</button>
+        </div>
+    </div>
+
+    <!-- Blocked Users Modal -->
+    <div id="blockedUsersModal" class="fixed inset-0 z-50 flex items-center justify-center modal hidden">
+        <div class="modal-content p-6 rounded-lg shadow-xl w-full max-w-lg">
+            <h2 class="text-2xl font-bold mb-4 text-white">Blocked Users</h2>
+            <div class="mb-4">
+                <p class="text-gray-300 text-sm mb-4">Manage users you have blocked. Blocked users' messages won't appear in your feed.</p>
+                <div id="blockedUsersList" class="space-y-2 max-h-64 overflow-y-auto bg-[#1a0d27] p-3 rounded border border-gray-600">
+                    <p class="text-gray-500 text-sm">No blocked users.</p>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="closeBlockedUsersBtn" class="btn-secondary py-2 px-4 rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="fixed inset-0 z-50 flex items-center justify-center modal hidden profile-modal">
+        <div class="modal-content w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+            <!-- Profile Header -->
+            <div class="profile-header p-6 text-white relative">
+                <button id="closeProfileModal" class="absolute top-4 right-4 text-white hover:text-gray-300 text-xl font-bold">&times;</button>
+                <div class="flex items-center space-x-4">
+                    <img id="profileAvatarLarge" src="" alt="Profile Avatar" class="w-20 h-20 rounded-full object-cover profile-avatar-large">
+                    <div class="flex-1">
+                        <h2 id="profileDisplayName" class="text-2xl font-bold">Loading...</h2>
+                        <p id="profileNpub" class="text-gray-300 text-sm font-mono break-all">npub...</p>
+                        <p id="profileNip05" class="text-gray-300 text-sm hidden">@example.com</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Content -->
+            <div class="p-6 bg-[#120b1c]">
+                <!-- Profile Bio -->
+                <div id="profileBioSection" class="mb-6">
+                    <h3 class="text-lg font-semibold text-white mb-2">About</h3>
+                    <div id="profileBio" class="text-gray-300 profile-bio">
+                        No bio available.
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div id="profileActions" class="flex space-x-3 mb-6">
+                    <!-- Edit Profile (only for own profile) -->
+                    <button id="editProfileBtn" class="btn-primary px-4 py-2 rounded-lg hidden">Edit Profile</button>
+
+                    <!-- Follow/Unfollow (for other profiles) -->
+                    <button id="followBtn" class="btn-follow px-4 py-2 rounded-lg hidden">Follow</button>
+                    <button id="unfollowBtn" class="btn-unfollow px-4 py-2 rounded-lg hidden">Unfollow</button>
+
+                    <!-- Block/Unblock (for other profiles) -->
+                    <button id="blockBtn" class="btn-block px-4 py-2 rounded-lg hidden">Block</button>
+                    <button id="unblockBtn" class="btn-unblock px-4 py-2 rounded-lg hidden">Unblock</button>
+
+                    <!-- Copy pubkey -->
+                    <button id="copyPubkeyBtn" class="btn-secondary px-4 py-2 rounded-lg">Copy Pubkey</button>
+                </div>
+
+                <!-- Edit Profile Form -->
+                <div id="editProfileForm" class="hidden">
+                    <h3 class="text-lg font-semibold text-white mb-4">Edit Profile</h3>
+
+                    <div class="space-y-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Display Name</label>
+                            <input type="text" id="editDisplayName" class="profile-edit-input" placeholder="Your display name">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">About</label>
+                            <textarea id="editBio" class="profile-edit-input profile-edit-textarea" placeholder="Tell people about yourself..."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Picture URL</label>
+                            <input type="url" id="editPicture" class="profile-edit-input" placeholder="https://example.com/avatar.jpg">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">NIP-05 Identifier (optional)</label>
+                            <input type="text" id="editNip05" class="profile-edit-input" placeholder="username@domain.com">
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-3">
+                        <button id="saveProfileBtn" class="btn-primary px-4 py-2 rounded-lg">Save Changes</button>
+                        <button id="cancelEditBtn" class="btn-secondary px-4 py-2 rounded-lg">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Post Detail Modal -->
+    <div id="postModal" class="fixed inset-0 z-70 flex items-center justify-center modal hidden post-modal">
+        <div class="post-modal-content w-full max-w-lg max-h-[80vh] overflow-y-auto m-4">
+            <!-- Post Header -->
+            <div class="post-modal-header p-4 text-white relative">
+                <button id="closePostModal" class="absolute top-3 right-3 text-white hover:text-gray-300 text-xl font-bold">&times;</button>
+                <h2 class="text-lg font-semibold">Post Details</h2>
+            </div>
+
+            <!-- Post Content -->
+            <div class="post-modal-body p-6">
+                <div id="postModalContent">
+                    <div class="text-center text-gray-500 py-4">Loading post...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Constants and State ---
+        const DEFAULT_RELAYS = [
+            "wss://relay.damus.io", "wss://relay.snort.social",
+            "wss://nos.lol", "wss://nostr.wine",
+        ];
+        let relays = [];
+        let connectedRelays = new Map(); // Map<url, WebSocket>
+        
+        // Expose connectedRelays globally for other modules
+        window.connectedRelays = connectedRelays;
+        
+        let currentSubscriptionId = null; // Track the main content subscription ID
+        // --- Global State Variables (synchronized with authManager and profileManager) ---
+        let userPubKey = null;
+        let userPrivateKey = null; // Store private key in memory ONLY if logged in with key
+        let loginMethod = null; // 'extension' or 'privateKey'
+        let userProfile = null; // Store user's own profile
+        let profilesCache = new Map(); // Map<pubkey, { name, picture, lud16, fetchedAt, created_at }>
+        
+        // Make profilesCache globally accessible for ProfileUtils synchronization
+        window.profilesCache = profilesCache;
+        let eventsCache = new Map(); // Map<id, event> - Simple cache to avoid re-rendering
+        let userFollows = new Set(); // Set<pubkey> - Pubkeys the user follows (from Kind 3)
+        let subscribedHashtags = []; // Array<string> - Hashtags user is tracking
+        let currentChannel = 'global'; // 'global' or '#hashtag'
+        let currentFilterMode = 'global'; // 'global', 'following'
+        let blockedUsers = new Set(); // Set<pubkey> - Pubkeys the user has blocked
+        let currentProfilePubkey = null; // Currently viewed profile pubkey
+        let enterBehavior = 'submit'; // 'submit' or 'newline' - controls Enter key behavior
+
+        // --- DOM Elements ---
+        const messageContainer = document.getElementById('messageContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginOptions = document.getElementById('loginOptions');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userInfo = document.getElementById('userInfo');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+        const connectionStatusContainer = document.getElementById('connectionStatusContainer');
+        const connectionIcon = document.getElementById('connectionIcon');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const manageRelaysBtn = document.getElementById('manageRelaysBtn');
+        const relayManagementModal = document.getElementById('relayManagementModal');
+        const relayInput = document.getElementById('relayInput');
+        const modalRelayList = document.getElementById('modalRelayList'); // List inside modal
+        const saveRelayBtn = document.getElementById('saveRelayBtn');
+        const cancelRelayBtn = document.getElementById('cancelRelayBtn');
+        const privateKeyModal = document.getElementById('privateKeyModal');
+        const privateKeyInput = document.getElementById('privateKeyInput');
+        const submitPrivateKeyBtn = document.getElementById('submitPrivateKeyBtn');
+        const cancelPrivateKeyBtn = document.getElementById('cancelPrivateKeyBtn');
+        const errorDisplay = document.getElementById('errorDisplay');
+        const errorMessage = document.getElementById('errorMessage');
+        const channelList = document.getElementById('channelList');
+        const addHashtagInput = document.getElementById('addHashtagInput');
+        const addHashtagBtn = document.getElementById('addHashtagBtn');
+        const channelIcon = document.getElementById('channelIcon');
+        const channelTitle = document.getElementById('channelTitle');
+        const filterBtn = document.getElementById('filterBtn');
+        const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+        const filterLabel = document.getElementById('filterLabel');
+        const followingFilterBtn = document.getElementById('followingFilterBtn');
+        const connectionStatusContainerHeader = document.getElementById('connectionStatusContainer');
+
+        // Blocked users modal elements
+        const blockedUsersBtn = document.getElementById('blockedUsersBtn');
+        const blockedUsersModal = document.getElementById('blockedUsersModal');
+        const closeBlockedUsersBtn = document.getElementById('closeBlockedUsersBtn');
+        const blockedUsersList = document.getElementById('blockedUsersList');
+
+        // Profile modal elements
+        const profileModal = document.getElementById('profileModal');
+        const closeProfileModal = document.getElementById('closeProfileModal');
+        const profileAvatarLarge = document.getElementById('profileAvatarLarge');
+        const profileDisplayName = document.getElementById('profileDisplayName');
+        const profileNpub = document.getElementById('profileNpub');
+        const profileNip05 = document.getElementById('profileNip05');
+        const profileBio = document.getElementById('profileBio');
+        const editProfileBtn = document.getElementById('editProfileBtn');
+        const followBtn = document.getElementById('followBtn');
+        const unfollowBtn = document.getElementById('unfollowBtn');
+        const blockBtn = document.getElementById('blockBtn');
+        const unblockBtn = document.getElementById('unblockBtn');
+        const copyPubkeyBtn = document.getElementById('copyPubkeyBtn');
+        const editProfileForm = document.getElementById('editProfileForm');
+        const editDisplayName = document.getElementById('editDisplayName');
+        const editBio = document.getElementById('editBio');
+        const editPicture = document.getElementById('editPicture');
+        const editNip05 = document.getElementById('editNip05');
+        const saveProfileBtn = document.getElementById('saveProfileBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+        // Notifications elements
+        const notificationsContainer = document.getElementById('notificationsContainer');
+        const notificationsBtn = document.getElementById('notificationsBtn');
+        const notificationBadge = document.getElementById('notificationBadge');
+        const notificationsList = document.getElementById('notificationsList');
+        const markAllReadBtn = document.getElementById('markAllReadBtn');
+
+        // Post modal elements
+        const postModal = document.getElementById('postModal');
+        const closePostModal = document.getElementById('closePostModal');
+        const postModalContent = document.getElementById('postModalContent');
+
+        // --- Storage Keys ---
+        const STORAGE_KEY_RELAYS = 'nostrRelays';
+        const STORAGE_KEY_HASHTAGS = 'nostrHashtags';
+        const STORAGE_KEY_BLOCKED_USERS = 'nostrBlockedUsers';
+        const STORAGE_KEY_ENTER_BEHAVIOR = 'nostrEnterBehavior';
+        const STORAGE_KEY_NOTIFICATIONS = 'nostrNotifications';
+        const STORAGE_KEY_LAST_NOTIFICATION_CHECK = 'nostrLastNotificationCheck';
+
+        // --- Notifications State ---
+        let notifications = []; // Array of notification objects
+        let lastNotificationCheck = 0; // Timestamp of last notification check
+        let notificationSubscriptionId = null; // Current notification subscription ID
+        let userPosts = new Set(); // Track user's own post IDs for reply notifications
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.NostrTools === 'undefined') {
+                 console.error("nostr-tools library not loaded!");
+                 showError("Required library (nostr-tools) failed to load. Private key login may not work.");
+            }
+
+            // Load data from storage
+            loadDataFromStorage();
+
+            // Synchronize profile caches between ProfileUtils and main app
+            if (window.profileUtils) {
+                console.log("Main app: Initializing ProfileUtils with", profilesCache.size, "existing profiles");
+                
+                // Initialize ProfileUtils to use the main cache
+                window.profileUtils.initializeCache();
+                
+                // Copy existing profiles to ProfileUtils cache if needed
+                for (let [pubkey, profile] of profilesCache) {
+                    window.profileUtils.setProfileInCache(pubkey, profile);
+                }
+                console.log("Profile caches synchronized on page load");
+            } else {
+                console.error("window.profileUtils is not available during initialization!");
+            }
+
+            // Update UI
+            updateHashtagListUI(); // Display hashtags
+            updateRelayListUI(); // Populate modal list initially
+            connectToRelays(); // Connect and trigger initial subscription
+            // Auth check handled by init.js
+
+            // Event Listeners
+            // Login button
+            const loginBtn = document.getElementById('loginBtn');
+            if (loginBtn) {
+                loginBtn.addEventListener('click', () => {
+                    openLoginModal();
+                });
+            }
+            
+            sendBtn.addEventListener('click', sendPost);
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    if (e.shiftKey) {
+                        // Shift+Enter always creates new line regardless of setting
+                        return; // Let default behavior handle it
+                    } else if (enterBehavior === 'submit') {
+                        e.preventDefault();
+                        sendPost();
+                    }
+                    // If enterBehavior is 'newline', let default behavior create new line
+                }
+            });
+            manageRelaysBtn.addEventListener('click', openRelayModal);
+            cancelRelayBtn.addEventListener('click', closeRelayModal);
+            saveRelayBtn.addEventListener('click', saveRelays);
+            addHashtagBtn.addEventListener('click', addHashtag);
+            addHashtagInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addHashtag(); });
+
+            // Auto-resize textarea
+            messageInput.addEventListener('input', autoResizeTextarea);
+
+            // Notifications event listeners
+            markAllReadBtn.addEventListener('click', markAllNotificationsRead);
+
+            // Click to toggle notifications dropdown
+            notificationsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                notificationsContainer.classList.toggle('active');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!notificationsContainer.contains(e.target)) {
+                    notificationsContainer.classList.remove('active');
+                }
+            });
+
+            // Update notifications UI
+            updateNotificationsUI();
+
+            // Blocked users modal event listeners
+            blockedUsersBtn.addEventListener('click', openBlockedUsersModal);
+            closeBlockedUsersBtn.addEventListener('click', closeBlockedUsersModal);
+            blockedUsersModal.addEventListener('click', (e) => {
+                if (e.target === blockedUsersModal) closeBlockedUsersModal();
+            });
+
+            // Enter behavior toggle event listener
+            document.getElementById('enterToggleBtn').addEventListener('click', toggleEnterBehavior);
+
+            // Profile modal event listeners - call setup function from init.js
+            if (typeof setupProfileEventListeners === 'function') {
+                setupProfileEventListeners();
+            }
+            
+            // Additional auth-related event listeners
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', logout);
+            }
+            
+            const cancelPrivateKeyBtn = document.getElementById('cancelPrivateKeyBtn');
+            if (cancelPrivateKeyBtn) {
+                cancelPrivateKeyBtn.addEventListener('click', () => {
+                    if (typeof window.hidePrivateKeyModal === 'function') {
+                        window.hidePrivateKeyModal();
+                    } else {
+                        console.error('hidePrivateKeyModal function not found');
+                    }
+                });
+            }
+            
+            const submitPrivateKeyBtn = document.getElementById('submitPrivateKeyBtn');
+            if (submitPrivateKeyBtn) {
+                submitPrivateKeyBtn.addEventListener('click', () => {
+                    if (typeof window.loginWithPrivateKey === 'function') {
+                        window.loginWithPrivateKey();
+                    } else {
+                        console.error('loginWithPrivateKey function not found');
+                    }
+                });
+            }
+            
+            const privateKeyInput = document.getElementById('privateKeyInput');
+            if (privateKeyInput) {
+                privateKeyInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        if (typeof window.loginWithPrivateKey === 'function') {
+                            window.loginWithPrivateKey();
+                        } else {
+                            console.error('loginWithPrivateKey function not found');
+                        }
+                    }
+                });
+            }
+
+            profileModal.addEventListener('click', (e) => {
+                if (e.target === profileModal) closeProfile();
+            });
+
+            // Post modal event listeners
+            closePostModal.addEventListener('click', closePostModalFunc);
+            postModal.addEventListener('click', (e) => {
+                if (e.target === postModal) closePostModalFunc();
+            });
+
+            // Add keyboard shortcut to close modals
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const emojiPicker = document.getElementById('emojiPicker');
+                    const loginModal = document.getElementById('loginModal');
+                    if (emojiPicker) {
+                        closeEmojiPicker();
+                    } else if (loginModal && !loginModal.classList.contains('hidden')) {
+                        loginModal.classList.add('hidden');
+                    } else if (!postModal.classList.contains('hidden')) {
+                        closePostModalFunc();
+                    } else if (!profileModal.classList.contains('hidden')) {
+                        closeProfile();
+                    } else if (!blockedUsersModal.classList.contains('hidden')) {
+                        closeBlockedUsersModal();
+                    }
+                }
+            });
+
+            toggleSidebarBtn.addEventListener('click', toggleSidebar);
+            messageContainer.innerHTML = ''; // Clear initial "Connecting..." message
+            updateChannelHeader(); // Set initial header
+            updateFilterButtonLabel(); // Set initial filter button text
+        });
+
+        // --- Error Handling ---
+        function showError(message) {
+            console.error("Error:", message);
+            errorMessage.textContent = message;
+            errorDisplay.classList.remove('hidden');
+            setTimeout(() => {
+                 if (errorMessage.textContent === message) errorDisplay.classList.add('hidden');
+            }, 7000);
+        }
+
+        function showSuccess(message) {
+            console.log("Success:", message);
+            // Create a temporary success notification
+            const successDiv = document.createElement('div');
+            successDiv.className = 'fixed bottom-4 right-4 bg-green-600 text-white p-3 rounded-lg shadow-lg z-60 max-w-sm';
+            successDiv.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="text-sm">${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-2 font-bold text-lg leading-none">&times;</button>
+                </div>
+            `;
+            document.body.appendChild(successDiv);
+            setTimeout(() => {
+                if (successDiv.parentElement) successDiv.remove();
+            }, 4000);
+        }
+
+        // --- Storage ---
+        function loadDataFromStorage() {
+            // Load relays
+            const storedRelays = localStorage.getItem(STORAGE_KEY_RELAYS);
+            relays = storedRelays ? JSON.parse(storedRelays) : [...DEFAULT_RELAYS];
+            if (!Array.isArray(relays) || relays.length === 0) {
+                relays = [...DEFAULT_RELAYS]; saveRelaysToStorage();
+            }
+
+            // Load hashtags
+            const storedHashtags = localStorage.getItem(STORAGE_KEY_HASHTAGS);
+            subscribedHashtags = storedHashtags ? JSON.parse(storedHashtags) : [];
+            if (!Array.isArray(subscribedHashtags)) {
+                subscribedHashtags = []; saveHashtags();
+            }
+
+            // Load blocked users
+            const storedBlockedUsers = localStorage.getItem(STORAGE_KEY_BLOCKED_USERS);
+            const blockedArray = storedBlockedUsers ? JSON.parse(storedBlockedUsers) : [];
+            blockedUsers = new Set(Array.isArray(blockedArray) ? blockedArray : []);
+
+            // Load enter behavior setting
+            const storedEnterBehavior = localStorage.getItem(STORAGE_KEY_ENTER_BEHAVIOR);
+            enterBehavior = storedEnterBehavior === 'newline' ? 'newline' : 'submit';
+            updateEnterToggleText();
+
+            // Load notifications
+            const storedNotifications = localStorage.getItem(STORAGE_KEY_NOTIFICATIONS);
+            notifications = storedNotifications ? JSON.parse(storedNotifications) : [];
+            if (!Array.isArray(notifications)) {
+                notifications = [];
+            }
+
+            // Load last notification check time
+            const storedLastCheck = localStorage.getItem(STORAGE_KEY_LAST_NOTIFICATION_CHECK);
+            lastNotificationCheck = storedLastCheck ? parseInt(storedLastCheck, 10) : Math.floor(Date.now() / 1000) - (24 * 60 * 60); // Default to 24 hours ago
+        }
+
+        // --- Event Signing ---
+        // Moved to js/auth.js - signEvent function is now handled by authManager
+
+        // --- Relay Management ---
+        function saveRelaysToStorage() { /* ... (no changes needed) ... */
+            localStorage.setItem(STORAGE_KEY_RELAYS, JSON.stringify(relays));
+        }
+
+        function updateRelayListUI() { /* ... (updated to populate modal list) ... */
+            if (!modalRelayList) return;
+            modalRelayList.innerHTML = ''; // Clear existing list
+            if (relays.length === 0) {
+                 modalRelayList.innerHTML = '<p class="text-gray-500 text-sm">No relays configured.</p>';
+                 updateOverallConnectionStatus();
+                 return;
+            }
+
+            relays.forEach(url => {
+                const ws = connectedRelays.get(url);
+                const isConnected = ws && ws.readyState === WebSocket.OPEN;
+                const isConnecting = ws && ws.readyState === WebSocket.CONNECTING;
+                let statusColor = 'text-red-400'; let statusIcon = 'lucide-x-circle'; let title = 'Disconnected';
+                let icon = '❌';
+                if (isConnected) { statusColor = 'text-green-400'; title = 'Connected'; }
+                else if (isConnecting) { statusColor = 'text-yellow-400'; icon = '🔄'; title = 'Connecting...'; }
+
+                const li = document.createElement('div'); // Use div for better layout control
+                li.className = `flex items-center justify-between text-sm ${statusColor} py-1`;
+                li.title = `${url} - ${title}`;
+                li.innerHTML = `
+                    <span class="truncate flex-1 mr-2">${url.replace('wss://', '').replace(/\/$/, '')}</span>
+                    <i class="lucide ${statusIcon} ml-1 flex-shrink-0"></i>
+                `;
+                modalRelayList.appendChild(li);
+            });
+            updateOverallConnectionStatus();
+        }
+        function updateOverallConnectionStatus() { /* ... (updated icon logic) ... */
+            const connectedCount = Array.from(connectedRelays.values()).filter(ws => ws.readyState === WebSocket.OPEN).length;
+            const connectingCount = Array.from(connectedRelays.values()).filter(ws => ws.readyState === WebSocket.CONNECTING).length;
+            const totalRelays = relays.length;
+
+            let statusText = '';
+            let statusClass = 'text-gray-400';
+            let icon = '📶';
+
+            if (connectedCount > 0) {
+                statusText = `Connected (${connectedCount}/${totalRelays})`;
+                statusClass = 'text-green-400';
+                icon = '📶';
+            } else if (connectingCount > 0) {
+                 statusText = `Connecting... (${connectingCount}/${totalRelays})`;
+                 statusClass = 'text-yellow-400';
+                 icon = '🔄';
+            } else if (totalRelays > 0) {
+                statusText = `Disconnected`;
+                statusClass = 'text-red-400';
+            } else {
+                statusText = 'No Relays';
+                statusClass = 'text-gray-500';
+                iconClass = 'lucide-wifi-off';
+            }
+
+            connectionStatus.textContent = statusText;
+            connectionStatusContainer.className = `flex items-center space-x-1 text-xs ${statusClass}`;
+            connectionIcon.textContent = icon;
+        }
+        function connectToRelays() { /* ... (updated to call subscribeToFeed) ... */
+            disconnectAllRelays();
+            messageContainer.innerHTML = '<div class="text-center text-gray-500 pt-10 loading-messages">Connecting to relays...</div>';
+
+            if (relays.length === 0) {
+                showError("No relays configured. Please add relays in the settings modal.");
+                updateRelayListUI();
+                return;
+            }
+
+            console.log("Connecting to relays:", relays);
+            relays.forEach(url => connectToRelay(url));
+            updateRelayListUI(); // Show connecting status immediately
+        }
+        function connectToRelay(url) { /* ... (updated to call subscribeToFeed on first connect) ... */
+            if (!url || typeof url !== 'string' || !url.startsWith('ws')) { console.error(`Invalid relay URL: ${url}`); return; }
+            if (connectedRelays.has(url) && connectedRelays.get(url).readyState !== WebSocket.CLOSED) return;
+
+            console.log(`Attempting to connect to ${url}...`);
+            try {
+                const ws = new WebSocket(url);
+                connectedRelays.set(url, ws);
+                updateRelayListUI();
+
+                ws.onopen = () => {
+                    console.log(`Connected to ${url}`);
+                    updateRelayListUI();
+                    // If this is the *first* connection established, subscribe to the feed
+                    if (Array.from(connectedRelays.values()).filter(w => w.readyState === WebSocket.OPEN).length === 1) {
+                         if (messageContainer.innerHTML.includes('Connecting to relays...')) {
+                             messageContainer.querySelector('.loading-messages').remove(); // Clear connecting message
+                         }
+                         subscribeToFeed(); // Initial subscription based on current channel/filter
+                    } else {
+                        // For subsequent connections, just send the *existing* subscription
+                        if (currentSubscriptionId) {
+                            const sub = findSubscriptionById(currentSubscriptionId); // Helper needed or manage subs differently
+                             if (sub) {
+                                console.log(`Resending subscription ${currentSubscriptionId} to new relay ${url}`);
+                                sendToWebSocket(ws, ["REQ", currentSubscriptionId, ...sub.filters]);
+                             }
+                        }
+                    }
+                };
+                ws.onmessage = (event) => handleRelayMessage(url, event.data);
+                ws.onerror = (error) => { console.error(`WebSocket Error (${url}):`, error); updateRelayListUI(); };
+                ws.onclose = (event) => { console.log(`Disconnected from ${url}. Code: ${event.code}`); updateRelayListUI(); };
+
+            } catch (error) {
+                 console.error(`Failed to create WebSocket for ${url}:`, error);
+                 showError(`Invalid relay URL or connection refused: ${url.replace('wss://','')}`);
+                 connectedRelays.delete(url); updateRelayListUI();
+            }
+        }
+        function disconnectAllRelays() { /* ... (no changes needed) ... */
+            console.log("Disconnecting from all relays...");
+            connectedRelays.forEach((ws, url) => {
+                if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                    ws.close(1000, "Client disconnecting");
+                }
+            });
+            connectedRelays.clear();
+            updateRelayListUI();
+        }
+        function sendToWebSocket(ws, message) { /* ... (no changes needed) ... */
+             if (ws.readyState === WebSocket.OPEN) {
+                 try { ws.send(JSON.stringify(message)); }
+                 catch (error) { console.error(`Failed to send to ${ws.url}:`, error); }
+            } else { console.warn(`WS not open for ${ws.url}. State: ${ws.readyState}.`); }
+        }
+        function broadcast(message) { /* ... (no changes needed) ... */
+            let sentCount = 0;
+            connectedRelays.forEach(ws => {
+                if (ws.readyState === WebSocket.OPEN) { sendToWebSocket(ws, message); sentCount++; }
+            });
+            if (sentCount === 0 && relays.length > 0) console.warn("Broadcast failed: No relays connected.");
+        }
+        // Simplified subscription management - only one main content subscription active at a time
+        function subscribe(subId, filters) {
+             unsubscribe(); // Close previous subscription first
+             currentSubscriptionId = subId;
+             broadcast(["REQ", subId, ...filters]);
+             console.log(`Subscribed (${subId}):`, JSON.stringify(filters));
+        }
+        function unsubscribe() {
+             if (currentSubscriptionId) {
+                 broadcast(["CLOSE", currentSubscriptionId]);
+                 console.log(`Unsubscribed (${currentSubscriptionId})`);
+                 currentSubscriptionId = null;
+             }
+        }
+        // Helper to find subscription details (if needed, but simplified model avoids this)
+        // function findSubscriptionById(subId) { ... }
+
+        // --- Message Handling ---
+        function handleRelayMessage(url, data) { /* ... (updated EVENT handling) ... */
+            try {
+                const message = JSON.parse(data);
+                const messageType = message[0];
+
+                switch (messageType) {
+                    case "EVENT":
+                        const subId = message[1];
+                        const event = message[2];
+                        // Only process if it matches the current main subscription
+                        if (subId === currentSubscriptionId) {
+                            event.relay_url = url; // Add relay context
+                            processEvent(event);
+                        } else {
+                            // Could be a temporary subscription (profiles, follows)
+                            handleTemporarySubscriptionEvent(subId, event);
+                        }
+                        break;
+                    case "NOTICE": console.warn(`NOTICE from ${url}: ${message[1]}`); break; // Filter noisy notices if needed
+                    case "OK": /* console.log(`OK from ${url}: ${message}`); */ break; // Handle success/failure feedback
+                    case "EOSE": /* console.log(`EOSE for ${message[1]} from ${url}`); */ break; // End of Stored Events
+                    default: console.warn(`Unknown msg type from ${url}: ${messageType}`, message);
+                }
+            } catch (error) { console.error(`Failed to parse msg from ${url}: ${data}`, error); }
+        }
+
+        // Handle events from temporary subs (like profile/follow fetches)
+        function handleTemporarySubscriptionEvent(subId, event) {
+             console.log(`Event for temp sub ${subId}`, event);
+             if (subId.startsWith('profiles-')) processMetadataEvent(event);
+             if (subId.startsWith('follows-')) processFollowListEvent(event);
+             if (subId.startsWith('notifications-')) processNotificationEvent(event);
+             if (subId.startsWith('user-posts-')) {
+                 if (event.kind === 1 && event.pubkey === authManager.publicKey) {
+                     userPosts.add(event.id);
+                 }
+             }
+             if (subId.startsWith('event-')) {
+                 // This is a response to a specific event fetch, process it
+                 processEvent(event);
+
+                 // Get author profile if needed
+                 if (!profilesCache.has(event.pubkey)) {
+                     if (window.profileUtils) {
+                         window.profileUtils.fetchProfiles([event.pubkey]);
+                     }
+                 }
+
+                 // Find and update any loading placeholders for this event
+                 const eventId = event.id;
+                 if (eventId) {
+                     // Wait a tiny bit for the event to be processed and cached
+                     setTimeout(() => {
+                         // Update all messages that reference this event
+                         document.querySelectorAll(`[data-loading-event-id="${eventId}"]`).forEach(placeholder => {
+                             const messageElement = placeholder.closest('.message');
+                             if (messageElement) {
+                                 updateMessageWithNevent(messageElement, eventId);
+                             }
+                         });
+                     }, 100);
+                 }
+             }
+             // Add handlers for other temporary subscriptions if needed
+        }
+
+        // --- Event Processing & Rendering ---
+        function processEvent(event) { /* ... (updated Kind 1 handling) ... */
+            if (!event?.id || !event.pubkey || typeof event.created_at !== 'number' || typeof event.kind !== 'number' || !Array.isArray(event.tags) || typeof event.content !== 'string' || !event.sig) {
+                console.warn("Invalid event structure:", event); return;
+            }
+            if (eventsCache.has(event.id)) return; // Avoid duplicates
+            eventsCache.set(event.id, event);
+
+            switch (event.kind) {
+                case 0: processMetadataEvent(event); break;
+                case 1:
+                    processTextNoteEvent(event);
+                    // Also check for notifications if this is a reply or mention
+                    if (authManager.isLoggedIn && notificationSubscriptionId) {
+                        processNotificationEvent(event);
+                    }
+                    break;
+                case 3: processFollowListEvent(event); break; // Handle follow list updates
+                case 7:
+                    // Process reactions for notifications
+                    if (authManager.isLoggedIn && notificationSubscriptionId) {
+                        processNotificationEvent(event);
+                    }
+                    break;
+                default: break;
+            }
+        }
+        function processMetadataEvent(event) {
+            // Use ProfileUtils to handle metadata processing
+            if (window.profileUtils) {
+                window.profileUtils.processMetadataEvent(event);
+            }
+        }
+        function processTextNoteEvent(event) { /* ... (added filtering logic) ... */
+            // Filter out blocked users first
+            if (blockedUsers.has(event.pubkey)) {
+                return; // Don't render messages from blocked users
+            }
+
+            // Apply filtering rules BEFORE rendering
+            if (currentFilterMode === 'following') {
+                 // Must be logged in and follow list must contain the author
+                 if (!authManager.isLoggedIn || !authManager.follows.has(event.pubkey)) {
+                     // console.log(`Filtering out note ${event.id} from non-followed user ${shortenPubKey(event.pubkey)}`);
+                     return; // Don't render if not following
+                 }
+            }
+            // Add checks for 'followers' or 'both' modes here if implemented
+
+            // Check if the event matches the current hashtag channel (if active)
+            if (currentChannel.startsWith('#')) {
+                const requiredTag = currentChannel.substring(1).toLowerCase();
+                const hasTag = event.tags.some(tag => tag[0] === 't' && tag[1]?.toLowerCase() === requiredTag);
+                if (!hasTag) {
+                    // console.log(`Filtering out note ${event.id} - missing tag ${requiredTag}`);
+                    return; // Don't render if tag doesn't match
+                }
+            }
+
+            // Render the message if it passes filters
+            renderMessage(event);
+
+            // Fetch profile if needed - more aggressive fetching
+            const profile = profilesCache.get(event.pubkey);
+            if (!profile || !profile.fetchedAt || 
+                (Date.now() - profile.fetchedAt > 6 * 3600 * 1000) || 
+                !profile.name || profile.name === shortenPubKey(event.pubkey)) {
+                console.log(`Fetching profile for ${shortenPubKey(event.pubkey)} in processTextNoteEvent`);
+                if (window.profileUtils) {
+                    window.profileUtils.fetchProfiles([event.pubkey]);
+                }
+            }
+        }
+        function processFollowListEvent(event) { /* ... (New function) ... */
+             if (event.kind !== 3 || event.pubkey !== authManager.publicKey) return; // Only process user's own Kind 3
+
+             console.log("Processing user's follow list (Kind 3)...");
+             const follows = new Set();
+             event.tags.forEach(tag => {
+                 if (tag[0] === 'p' && tag[1] && !blockedUsers.has(tag[1])) { // 'p' tag indicates a followed pubkey, exclude blocked users
+                     follows.add(tag[1]);
+                 }
+             });
+
+             // Check if the follow list actually changed
+             if (!setsAreEqual(authManager.follows, follows)) {
+                 authManager.follows = follows;
+                 userFollows = follows; // Keep legacy global variable in sync for backward compatibility
+                 console.log(`Updated follow list: ${authManager.follows.size} follows.`);
+                 // If the filter mode is 'following', we might need to re-render or re-filter messages
+                 // For simplicity, we can just re-subscribe which clears and refills the feed
+                 if (currentFilterMode === 'following') {
+                     console.log("Follow list changed, resubscribing to 'following' feed.");
+                     subscribeToFeed();
+                 }
+             } else {
+                 console.log("Follow list unchanged.");
+             }
+        }
+
+        // --- Profile & Follow List Handling ---
+        function fetchFollowList() { /* ... (New function) ... */
+             if (!authManager.isLoggedIn) return;
+             console.log("Fetching follow list (Kind 3) for user:", shortenPubKey(authManager.publicKey));
+             const subId = `follows-${generateSubId()}`;
+             const filters = [{
+                 kinds: [3], // Follow list event
+                 authors: [authManager.publicKey],
+                 limit: 1 // Get only the latest Kind 3 event
+             }];
+             broadcast(["REQ", subId, ...filters]);
+             // Auto-close after a delay
+             setTimeout(() => broadcast(["CLOSE", subId]), 5000);
+        }
+        function updateUserProfileUI() {
+            if (userProfile && authManager.isLoggedIn) {
+                userName.textContent = userProfile.name || shortenPubKey(authManager.publicKey);
+                
+                // Check if we have a valid picture URL before setting it
+                const pictureUrl = userProfile.picture;
+                if (pictureUrl && pictureUrl.trim() !== '' && (pictureUrl.startsWith('http://') || pictureUrl.startsWith('https://'))) {
+                    userAvatar.src = pictureUrl;
+                    userAvatar.style.display = 'block';
+                    userAvatar.onerror = () => { 
+                        userAvatar.style.display = 'none';
+                    };
+                } else {
+                    // Hide avatar entirely if no valid picture URL
+                    userAvatar.style.display = 'none';
+                }
+            }
+        }
+        function updateMessagesFromPubKey(pubkey) {
+             const profile = window.profileUtils ? window.profileUtils.getProfile(pubkey) : { name: shortenPubKey(pubkey), picture: null, hasValidPicture: false };
+             const messages = messageContainer.querySelectorAll(`.message[data-pubkey="${pubkey}"]`);
+             messages.forEach(msgElement => {
+                 const avatarContainer = msgElement.querySelector('.flex-shrink-0');
+                 const nameElement = msgElement.querySelector('.author-name');
+                 
+                 if (avatarContainer && profile) {
+                     // Regenerate avatar HTML based on current profile
+                     let avatarHTML;
+                     if (profile.hasValidPicture && profile.picture) {
+                         avatarHTML = `<img src="${profile.picture}" alt="${profile.name.substring(0, 1)}" class="avatar-img w-10 h-10 rounded-full object-cover avatar cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all" onerror="this.style.display='none';" onclick="profileManager.openProfile('${pubkey}')" title="View ${profile.name}'s profile">`;
+                     } else {
+                         avatarHTML = `<div class="avatar-placeholder w-10 h-10 rounded-full bg-[#9147ff] flex items-center justify-center text-white font-bold text-sm cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all" onclick="profileManager.openProfile('${pubkey}')" title="View ${profile.name}'s profile">${pubkey.substring(0, 2).toUpperCase()}</div>`;
+                     }
+                     avatarContainer.innerHTML = avatarHTML;
+                 }
+                 
+                 if (nameElement) { 
+                     nameElement.textContent = profile.name; 
+                     nameElement.title = `View ${profile.name}'s profile`;
+                 }
+             });
+        }
+
+        // --- Message Rendering ---
+        function renderMessage(event) { /* ... (minor style adjustments if needed) ... */
+            if (!messageContainer) return;
+            const existingElement = document.getElementById(`note-${event.id}`);
+            if (existingElement) return; // Don't re-render
+
+            const profile = window.profileUtils ? window.profileUtils.getProfile(event.pubkey) : { name: shortenPubKey(event.pubkey), picture: null, hasValidPicture: false };
+            
+            // Fetch profile if we don't have it, it's stale, or the picture is invalid
+            if (window.profileUtils) {
+                const cachedProfile = profilesCache.get(event.pubkey);
+                const shouldFetch = !cachedProfile || 
+                                  !cachedProfile.fetchedAt || 
+                                  (Date.now() - cachedProfile.fetchedAt > 6 * 3600 * 1000) ||
+                                  (!profile.hasValidPicture && cachedProfile.name === shortenPubKey(event.pubkey));
+                
+                if (shouldFetch) {
+                    console.log(`Fetching profile for ${shortenPubKey(event.pubkey)} in renderMessage`);
+                    window.profileUtils.fetchProfiles([event.pubkey]);
+                }
+            }
+            
+            const messageId = `note-${event.id}`;
+
+            const profileData = profilesCache.get(event.pubkey);
+            const nip05 = profileData?.nip05;
+            const displayName = nip05 ? `${profile.name} <span class="text-gray-400">(${nip05})</span>` : profile.name;
+
+            const npub = window.NostrTools.nip19.npubEncode(event.pubkey);
+            const messageDiv = document.createElement('div');
+
+            // Adjusted padding and hover effect
+            messageDiv.className = 'message flex p-3 rounded-md hover:bg-[#1f112e]';
+            messageDiv.id = messageId;
+            messageDiv.dataset.pubkey = event.pubkey;
+            messageDiv.dataset.eventId = event.id;
+            messageDiv.dataset.createdAt = event.created_at; // Store timestamp for sorting
+
+            const timestamp = new Date(event.created_at * 1000);
+            const formattedTime = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const formattedDate = timestamp.toLocaleDateString([], { month: 'short', day: 'numeric'});
+            const fullTimestamp = timestamp.toLocaleString();
+
+            let contentHTML = sanitizeHTML(event.content); // Use basic sanitizer
+
+            // Add reply button
+            contentHTML = contentHTML.replace(/(https?:\/\/[^\s]+)/g, (match) => {
+                const lowerCaseMatch = match.toLowerCase();
+                if (lowerCaseMatch.endsWith('.jpg') || lowerCaseMatch.endsWith('.jpeg') || lowerCaseMatch.endsWith('.png') || lowerCaseMatch.endsWith('.avif') || lowerCaseMatch.endsWith('.webp')) {
+                    return `<img src="${match}" alt="Image" class="max-w-full max-h-96 rounded-lg my-2 cursor-pointer" loading="lazy" onclick="openFullscreen('${match}')">`;
+                } else if (lowerCaseMatch.endsWith('.mp4')) {
+                    return `<video controls class="max-w-full max-h-96 rounded-lg my-2 cursor-pointer" loading="lazy" onclick="openFullscreen('${match}')">
+                                <source src="${match}" type="video/mp4" >
+                                Your browser does not support the video tag.
+                            </video>`;
+                } else {
+                    return `<a href="${match}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">${match}</a>`;
+                }
+            });
+
+
+            const replyButton = `<button class="reply-button text-gray-400 hover:text-blue-400 text-xs ml-2" onclick="replyToMessage('${event.id}', '${event.pubkey}')">Reply</button>`;
+            // Use data attribute to avoid issues with quotes and escaping the full content
+            const quoteButton = `<button class="quote-button text-gray-400 hover:text-purple-400 text-xs ml-2"
+                data-event-id="${event.id}"
+                data-pubkey="${event.pubkey}"
+                data-content="${encodeURIComponent(event.content)}"
+                onclick="quotePost(this.dataset.eventId, this.dataset.pubkey, decodeURIComponent(this.dataset.content))">Quote</button>`;
+
+            const reactButton = `<button class="react-button text-gray-400 hover:text-red-400 text-xs ml-2"
+                onclick="showEmojiPicker('${event.id}', '${event.pubkey}')">React</button>`;
+
+            contentHTML = formatContent(contentHTML); // Format links, etc.
+
+            // Create avatar HTML based on whether we have a valid picture
+            let avatarHTML;
+            if (profile.hasValidPicture && profile.picture) {
+                avatarHTML = `<img src="${profile.picture}" alt="${profile.name.substring(0, 1)}" class="avatar-img w-10 h-10 rounded-full object-cover avatar cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all" onerror="this.style.display='none';" onclick="profileManager.openProfile('${event.pubkey}')" title="View ${profile.name}'s profile">`;
+            } else {
+                // Show placeholder div instead of broken image
+                avatarHTML = `<div class="avatar-placeholder w-10 h-10 rounded-full bg-[#9147ff] flex items-center justify-center text-white font-bold text-sm cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all" onclick="profileManager.openProfile('${event.pubkey}')" title="View ${profile.name}'s profile">${event.pubkey.substring(0, 2).toUpperCase()}</div>`;
+            }
+
+            messageDiv.innerHTML = `
+                <div class="flex-shrink-0 mr-3">
+                    ${avatarHTML}
+                </div>
+                <div class="flex-1 overflow-hidden"> <div class="flex items-baseline space-x-2">
+                        <span class="author-name font-semibold text-white hover:underline cursor-pointer truncate" title="View ${profile.name}'s profile" onclick="profileManager.openProfile('${event.pubkey}')">${profile.name}</span>
+                        <span class="text-xs text-gray-400 flex-shrink-0" title="${fullTimestamp}">
+                            <span class="copyable-text" data-copy-text="${npub}" onclick="copyToClipboard(this)" title="Click to copy npub">
+                                ${npub}
+                            </span>
+                            ${formattedDate} ${formattedTime}</span>
+                    </div>
+                    <div class="message-content text-gray-200 mt-1 break-words">${contentHTML}</div>
+                    <div class="mt-1 flex space-x-1">
+                        ${replyButton}
+                        ${quoteButton}
+                        ${reactButton}
+                    </div>
+                </div>
+            `;
+
+            // Insert message chronologically (newest at the bottom)
+             const existingMessages = messageContainer.querySelectorAll('.message');
+             let inserted = false;
+             for (let i = existingMessages.length - 1; i >= 0; i--) {
+                 const existingTimestamp = parseInt(existingMessages[i].dataset.createdAt, 10);
+                 if (event.created_at > existingTimestamp) {
+                     messageContainer.insertBefore(messageDiv, existingMessages[i].nextSibling); // Insert after
+                     inserted = true;
+                     break;
+                 }
+             }
+             if (!inserted) { // If it's the oldest or first message
+                 messageContainer.insertBefore(messageDiv, messageContainer.firstChild); // Insert at top
+             }
+
+             // Scroll logic (optional - might be annoying if loading old messages)
+             // const isScrolledToBottom = messageContainer.scrollHeight - messageContainer.clientHeight <= messageContainer.scrollTop + 150;
+             // if (isScrolledToBottom) messageContainer.scrollTop = messageContainer.scrollHeight;
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+        function openFullscreen(url) {
+            const modal = document.createElement('div');
+            modal.className = 'fullscreen-modal fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80';
+            modal.onclick = () => modal.remove();
+            if (url.endsWith('.mp4')) {
+                modal.innerHTML = `<video src="${url}" controls class="max-w-full max-h-screen"></video>`;
+            } else {
+                modal.innerHTML = `<img src="${url}" class="max-w-full max-h-screen">`;
+            }
+            document.body.appendChild(modal);
+        }
+
+
+        function replyToMessage(eventId, pubkey) {
+            const npub = window.NostrTools.nip19.npubEncode(pubkey);
+            const nevent = window.NostrTools.nip19.neventEncode({ id: eventId, relays: [] });
+            // Store reply data as data attributes on the input field instead of in its value
+            messageInput.dataset.replyToEvent = `nostr:${nevent}`;
+            messageInput.dataset.replyToUser = `nostr:${npub}`;
+            // Get username for better UX
+            const profile = window.profileUtils ? window.profileUtils.getProfile(pubkey) : { name: shortenPubKey(pubkey), picture: null, hasValidPicture: false };
+            messageInput.value = `@${profile.name} `;
+            messageInput.focus();
+            // Place cursor at the end for easy typing
+            messageInput.selectionStart = messageInput.selectionEnd = messageInput.value.length;
+            // Visual indication of reply
+            messageInput.classList.add('replying');
+            // Show a reply indicator above the input
+            const replyIndicator = document.getElementById('replyIndicator') || createReplyIndicator();
+            replyIndicator.querySelector('.reply-to-name').textContent = profile.name;
+            replyIndicator.classList.remove('hidden');
+        }
+
+        function createReplyIndicator() {
+            const indicator = document.createElement('div');
+            indicator.id = 'replyIndicator';
+            indicator.className = 'bg-[#231b2e] text-gray-300 px-3 py-2 text-xs flex items-center justify-between border-t border-gray-700';
+            indicator.innerHTML = `
+                <div>Replying to <span class="reply-to-name font-bold text-white"></span></div>
+                <button class="text-gray-400 hover:text-white" onclick="cancelReply()">✕</button>
+            `;
+            const inputContainer = messageInput.parentElement;
+            inputContainer.parentNode.insertBefore(indicator, inputContainer);
+            return indicator;
+        }
+
+        function cancelReply() {
+            delete messageInput.dataset.replyToEvent;
+            delete messageInput.dataset.replyToUser;
+            messageInput.classList.remove('replying');
+            messageInput.value = '';
+            autoResizeTextarea(); // Reset textarea height
+            document.getElementById('replyIndicator')?.classList.add('hidden');
+        }
+
+        function quotePost(eventId, pubkey, content) {
+                       const npub = window.NostrTools.nip19.npubEncode(pubkey);
+            const nevent = window.NostrTools.nip19.neventEncode({ id: eventId, relays: [] });
+            // Store quote data as data attributes on the input field
+            messageInput.dataset.quoteEvent = `nostr:${nevent}`;
+            messageInput.dataset.quoteUser = `nostr:${npub}`;
+            messageInput.dataset.quoteContent = content; // Store the full content for reference
+
+            // Get username for better UX
+            const profile = window.profileUtils ? window.profileUtils.getProfile(pubkey) : { name: shortenPubKey(pubkey), picture: null, hasValidPicture: false };
+
+            // Format content for preview in the quote indicator
+            const maxPreviewLength = 100;
+            const previewContent = content.length > maxPreviewLength
+                ? content.substring(0, maxPreviewLength) + '...'
+                : content;
+
+            // Set focus and cursor
+            messageInput.focus();
+            // Visual indication of quoting
+            messageInput.classList.add('quoting');
+            // Show a quote indicator above the input
+            const quoteIndicator = document.getElementById('quoteIndicator') || createQuoteIndicator();
+            quoteIndicator.querySelector('.quote-content').textContent = previewContent;
+            quoteIndicator.querySelector('.quote-author').textContent = profile.name;
+            quoteIndicator.classList.remove('hidden');
+        }
+
+        function createQuoteIndicator() {
+            const indicator = document.createElement('div');
+            indicator.id = 'quoteIndicator';
+            indicator.className = 'bg-[#231b2e] text-gray-300 px-3 py-2 text-xs flex flex-col border-t border-gray-700';
+            indicator.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                    <div>Quoting <span class="quote-author font-bold text-white"></span></div>
+                    <button class="text-gray-400 hover:text-white" onclick="cancelQuote()">✕</button>
+                </div>
+                <div class="quote-content text-gray-400 text-xs italic truncate"></div>
+            `;
+            const inputContainer = messageInput.parentElement;
+            inputContainer.parentNode.insertBefore(indicator, inputContainer);
+            return indicator;
+        }
+
+        function cancelQuote() {
+            delete messageInput.dataset.quoteEvent;
+            delete messageInput.dataset.quoteUser;
+            delete messageInput.dataset.quoteContent; // Also clear the stored quote content
+            messageInput.classList.remove('quoting');
+            autoResizeTextarea(); // Reset textarea height
+            document.getElementById('quoteIndicator')?.classList.add('hidden');
+        }
+
+        async function reactToPost(eventId, authorPubkey, emoji = "❤️") {
+            if (!authManager.isLoggedIn) {
+                showError("Please log in to react to posts.");
+                return;
+            }
+
+            try {
+                // Create Kind 7 reaction event according to NIP-25
+                const event = {
+                    kind: 7,
+                    content: emoji, // User-chosen emoji reaction
+                    tags: [
+                        ["e", eventId], // Reference to the event being reacted to
+                        ["p", authorPubkey] // Reference to the author of the event
+                    ]
+                };
+
+                const signedEvent = await signEvent(event);
+                broadcast(["EVENT", signedEvent]);
+
+                showSuccess(`Reaction sent! ${emoji}`);
+                console.log(`Reacted to event ${eventId.substring(0, 8)}... by ${shortenPubKey(authorPubkey)} with ${emoji}`);
+            } catch (error) {
+                console.error("Failed to send reaction:", error);
+                showError(`Failed to send reaction: ${error.message}`);
+            }
+        }
+
+        function showEmojiPicker(eventId, authorPubkey) {
+            // Remove any existing emoji picker
+            const existingPicker = document.getElementById('emojiPicker');
+            if (existingPicker) {
+                existingPicker.remove();
+            }
+
+            // Common emojis for reactions
+            const commonEmojis = [
+                '❤️', '👍', '👎', '😂', '😢', '😮', '😡', '🔥',
+                '👏', '🎉', '💯', '✨', '⚡', '💪', '🙏', '👀',
+                '🤔', '😍', '🥰', '😊', '🤗', '👌', '✅', '❌'
+            ];
+
+            // Create emoji picker modal
+            const picker = document.createElement('div');
+            picker.id = 'emojiPicker';
+            picker.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
+
+            picker.innerHTML = `
+                <div class="bg-[#1a0d27] rounded-lg p-6 max-w-md w-full mx-4 border border-gray-600">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-white">Choose a reaction</h3>
+                        <button onclick="closeEmojiPicker()" class="text-gray-400 hover:text-white text-xl">&times;</button>
+                    </div>
+                    <div class="grid grid-cols-8 gap-2 mb-4">
+                        ${commonEmojis.map(emoji =>
+                            `<button class="text-2xl p-2 rounded hover:bg-gray-700 transition-colors"
+                             onclick="selectEmoji('${emoji}', '${eventId}', '${authorPubkey}')">${emoji}</button>`
+                        ).join('')}
+                    </div>
+                    <div class="border-t border-gray-600 pt-4">
+                        <label class="block text-sm text-gray-300 mb-2">Or type a custom emoji:</label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="customEmojiInput"
+                                   class="flex-1 px-3 py-2 bg-[#2a1d3a] border border-gray-600 rounded text-white"
+                                   placeholder="Type emoji..." maxlength="10">
+                            <button onclick="selectCustomEmoji('${eventId}', '${authorPubkey}')"
+                                    class="btn-primary px-4 py-2 rounded">Send</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(picker);
+
+            // Focus on custom input and allow Enter key
+            const customInput = document.getElementById('customEmojiInput');
+            customInput.focus();
+            customInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    selectCustomEmoji(eventId, authorPubkey);
+                }
+            });
+
+            // Close on backdrop click
+            picker.addEventListener('click', (e) => {
+                if (e.target === picker) {
+                    closeEmojiPicker();
+                }
+            });
+        }
+
+        function selectEmoji(emoji, eventId, authorPubkey) {
+            reactToPost(eventId, authorPubkey, emoji);
+            closeEmojiPicker();
+        }
+
+        function selectCustomEmoji(eventId, authorPubkey) {
+            const customInput = document.getElementById('customEmojiInput');
+            const emoji = customInput.value.trim();
+
+            if (!emoji) {
+                showError("Please enter an emoji");
+                return;
+            }
+
+            reactToPost(eventId, authorPubkey, emoji);
+            closeEmojiPicker();
+        }
+
+        function closeEmojiPicker() {
+            const picker = document.getElementById('emojiPicker');
+            if (picker) {
+                picker.remove();
+            }
+        }
+
+        function copyToClipboard(element) {
+            const textToCopy = element.dataset.copyText;
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    console.log(`Copied to clipboard: ${textToCopy}`);
+                })
+                .catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+        }
+
+        // Basic HTML Sanitizer
+        function sanitizeHTML(str) {
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML; // Converts < > & etc. to entities
+        }
+
+        // Function to update a message's content specifically for nevent rendering
+        function updateMessageWithNevent(messageElement, eventId) {
+            if (!messageElement || !eventId) return;
+
+            // Only proceed if we now have the event in cache
+            const fetchedEvent = eventsCache.get(eventId);
+            if (!fetchedEvent) return;
+
+            const originalEventId = messageElement.dataset.eventId;
+            if (!originalEventId) return;
+
+            // Get the original event to extract its content
+            const originalEvent = eventsCache.get(originalEventId);
+            if (!originalEvent || !originalEvent.content) return;
+
+            // Find the message content container
+            const contentContainer = messageElement.querySelector('.message-content');
+            if (!contentContainer) return;
+
+            // Re-format the content now that we have the nevent cached
+            contentContainer.innerHTML = formatContent(originalEvent.content);
+
+            console.log(`Updated message ${originalEventId} with fetched nevent ${eventId}`);
+        }
+
+        // Basic HTML sanitization for security
+        function sanitizeHTML(str) {
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        }
+
+        // Format content (links, maybe mentions later)
+        function formatContent(content) {
+            // Render simple URLs as clickable links
+            content = content.replace(/(https?:\/\/[^\s]+)/g, (match) => {
+                 // Avoid creating links within existing HTML tags (basic check)
+                 if (match.includes('"') || match.includes("'") || match.includes('<') || match.includes('>')) return match;
+                 return `<a href="${match}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">${match}</a>`;
+            });
+
+            // Render NIP-21 nostr: links (nevent, npub, note, etc.)
+            content = content.replace(/(nostr:)?([a-z0-9]{1,12}1[a-z0-9]{6,})/gi, (match, prefix, identifier) => {
+                // Safety check for NostrTools availability
+                if (typeof window.NostrTools === 'undefined' || typeof window.NostrTools.nip19 === 'undefined') {
+                    return match; // Return original if NostrTools not available
+                }
+
+                try {
+                    // Try to decode the identifier
+                    const decoded = window.NostrTools.nip19.decode(identifier);
+
+                    if (decoded.type === 'nevent') {
+                        // Render nevent as embedded note preview
+                        const eventId = decoded.data.id;
+                        const relays = decoded.data.relays || [];
+
+                        // Check if we have this event in cache
+                        const cachedEvent = eventsCache.get(eventId);
+                        if (cachedEvent) {
+                            // Get author profile
+                            const authorProfile = window.profileUtils ? window.profileUtils.getProfile(cachedEvent.pubkey) : { name: shortenPubKey(cachedEvent.pubkey), picture: null, hasValidPicture: false };
+                            const authorNpub = window.NostrTools.nip19.npubEncode(cachedEvent.pubkey);
+
+                            // Format timestamp
+                            const timestamp = new Date(cachedEvent.created_at * 1000);
+                            const formattedTime = timestamp.toLocaleString();
+
+                            // Truncate content for preview
+                            let previewContent = sanitizeHTML(cachedEvent.content);
+                            if (previewContent.length > 200) {
+                                previewContent = previewContent.substring(0, 200) + '...';
+                            }
+
+                            // Create avatar HTML for embedded post
+                            let embeddedAvatarHTML;
+                            if (authorProfile.hasValidPicture && authorProfile.picture) {
+                                embeddedAvatarHTML = `<img src="${authorProfile.picture}" alt="${authorProfile.name}" class="w-6 h-6 rounded-full object-cover" onerror="this.style.display='none';">`;
+                            } else {
+                                embeddedAvatarHTML = `<div class="w-6 h-6 rounded-full bg-[#9147ff] flex items-center justify-center text-white font-bold text-xs">${cachedEvent.pubkey.substring(0, 2).toUpperCase()}</div>`;
+                            }
+
+                            return `
+                                <div class="bg-[#231b2e] border border-gray-600 rounded-lg p-3 my-2 max-w-md">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        ${embeddedAvatarHTML}
+                                        <span class="font-semibold text-white text-sm cursor-pointer hover:underline" onclick="profileManager.openProfile('${cachedEvent.pubkey}')" title="View ${authorProfile.name}'s profile">${authorProfile.name}</span>
+                                        <span class="text-xs text-gray-400">${formattedTime}</span>
+                                    </div>
+                                    <div class="text-gray-200 text-sm break-words">${previewContent}</div>
+                                    <div class="mt-2 flex space-x-2">
+                                        <button class="text-gray-400 hover:text-blue-400 text-xs" onclick="replyToMessage('${eventId}', '${cachedEvent.pubkey}')">Reply</button>
+                                        <button class="text-gray-400 hover:text-purple-400 text-xs" onclick="quotePost('${eventId}', '${cachedEvent.pubkey}', '${encodeURIComponent(cachedEvent.content)}')">Quote</button>
+                                        <button class="text-gray-400 hover:text-red-400 text-xs" onclick="showEmojiPicker('${eventId}', '${cachedEvent.pubkey}')">React</button>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            // Event not in cache, attempt to fetch it and show loading indicator
+                            const placeholderId = `loading-event-${eventId}`;
+
+                            // Start fetching the event (will handle null relays inside)
+                            fetchEvent(eventId, relays);
+
+                            // Show loading placeholder
+                            return `
+                                <div id="${placeholderId}" data-loading-event-id="${eventId}" class="bg-[#231b2e] border border-gray-600 rounded-lg p-3 my-2 max-w-md">
+                                    <div class="text-gray-400 text-sm">📄 Referenced note</div>
+                                    <div class="text-xs text-gray-500 mt-1">nevent: ${identifier.substring(0, 16)}...</div>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <div class="animate-spin h-4 w-4 border-2 border-purple-500 rounded-full border-t-transparent"></div>
+                                        <div class="text-xs text-gray-400">Fetching from relays...</div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    } else if (decoded.type === 'npub') {
+                        // Render npub as profile link
+                        const pubkey = decoded.data;
+                        const profile = window.profileUtils ? window.profileUtils.getProfile(pubkey) : { name: shortenPubKey(pubkey), picture: null, hasValidPicture: false };
+                        return `<span class="text-purple-400 hover:text-purple-300 cursor-pointer font-medium" onclick="profileManager.openProfile('${pubkey}')" title="View ${profile.name}'s profile">@${profile.name}</span>`;
+                    } else if (decoded.type === 'note') {
+                        // Render note as simple event reference
+                        const eventId = decoded.data;
+                        const cachedEvent = eventsCache.get(eventId);
+                        if (cachedEvent) {
+                            const authorProfile = window.profileUtils ? window.profileUtils.getProfile(cachedEvent.pubkey) : { name: shortenPubKey(cachedEvent.pubkey), picture: null, hasValidPicture: false };
+                            return `<span class="text-blue-400 hover:text-blue-300 cursor-pointer" onclick="profileManager.openProfile('${cachedEvent.pubkey}')" title="Note by ${authorProfile.name}">📄 ${authorProfile.name}'s note</span>`;
+                        } else {
+                            return `<span class="text-blue-400">📄 note:${identifier.substring(0, 8)}...</span>`;
+                        }
+                    }
+
+                    // For other types, just show as is
+                    return match;
+                } catch (error) {
+                    // If decoding fails, return original match
+                    console.warn('Failed to decode nostr identifier:', identifier, error);
+                    return match;
+                }
+            });
+
+            // TODO: Render NIP-10 mentions (@npub...)
+            // TODO: Render #hashtags as links (maybe link to selectChannel?)
+            return content;
+        }
+
+
+        // --- Sending Messages ---
+        async function sendPost() { /* ... (updated to add hashtag) ... */
+            let content = messageInput.value.trim(); // Changed from const to let to allow modification
+            if (!content) return;
+            if (!authManager.isLoggedIn) { showError("Please log in first."); return; }
+
+            sendBtn.disabled = true; sendBtn.innerHTML = '<i class="lucide lucide-loader-2 animate-spin mr-1"></i> Sending...';
+
+            let tags = [];
+            // Add hashtag if currently in a hashtag channel
+            if (currentChannel.startsWith('#')) {
+                const tagName = currentChannel.substring(1);
+                tags.push(["t", tagName]); // Add NIP-10 topic tag
+            }
+
+            // Check if the message is a reply using data attributes
+            const replyToEvent = messageInput.dataset.replyToEvent;
+            const replyToUser = messageInput.dataset.replyToUser;
+            const quoteEvent = messageInput.dataset.quoteEvent;
+            const quoteUser = messageInput.dataset.quoteUser;
+
+            // Handle reply tags (if this is a reply)
+            if (replyToEvent && replyToUser) {
+                const nevent = replyToEvent.replace('nostr:', '');
+                const npub = replyToUser.replace('nostr:', '');
+                const { data: { id: eventId, relays: eventRelays } } = window.NostrTools.nip19.decode(nevent);
+                const { data: pubkey } = window.NostrTools.nip19.decode(npub);
+                tags.push(["e", eventId, "", "reply"]);  // Added "reply" to make it a proper reply, not a quote post
+                tags.push(["p", pubkey]);
+                if (eventRelays && eventRelays.length > 0) {
+                    eventRelays.forEach(relay => tags.push(["e", eventId, relay]));
+                }
+            }                // Handle quote post (if this is a quote)
+            else if (quoteEvent && quoteUser) {
+                const nevent = quoteEvent.replace('nostr:', '');
+                const npub = quoteUser.replace('nostr:', '');
+                try {
+                    // Use proper error handling for decoding
+                    let eventData, pubkeyData;
+
+                    try {
+                        const decodedEvent = window.NostrTools.nip19.decode(nevent);
+                        eventData = decodedEvent.data;
+                    } catch (decodeError) {
+                        console.error("Failed to decode nevent:", decodeError);
+                        throw new Error("Invalid event reference");
+                    }
+
+                    try {
+                        const decodedPubkey = window.NostrTools.nip19.decode(npub);
+                        pubkeyData = decodedPubkey.data;
+                    } catch (decodeError) {
+                        console.error("Failed to decode npub:", decodeError);
+                        throw new Error("Invalid user reference");
+                    }
+
+                    // Extract event ID and pubkey properly based on the decoded data structure
+                    const eventId = typeof eventData === 'object' && eventData.id ? eventData.id : eventData;
+                    const eventRelays = typeof eventData === 'object' && eventData.relays ? eventData.relays : [];
+                    const pubkey = pubkeyData;
+
+                    // Add required tags for the quote
+                    tags.push(["e", eventId, "", "mention"]);  // Use "mention" for a quote rather than a reply
+                    tags.push(["p", pubkey]);
+                    if (eventRelays && eventRelays.length > 0) {
+                        eventRelays.forEach(relay => tags.push(["e", eventId, relay]));
+                    }
+
+                    // Get information for the quoted post
+                    const profile = window.profileUtils ? window.profileUtils.getProfile(pubkey) : { name: shortenPubKey(pubkey), picture: null, hasValidPicture: false };
+
+                    // Get quoted content either from data attribute or cache
+                    let quoteContent = messageInput.dataset.quoteContent || '';
+                    if (!quoteContent) {
+                        // Fall back to cached event if dataset is empty
+                        const quotedEvent = eventsCache.get(eventId);
+                        if (quotedEvent) {
+                            quoteContent = quotedEvent.content;
+                        }
+                    }
+
+                    // Format the post with a proper nostr reference
+                    // This will create a proper embedded post reference rather than just quoting text
+
+                    // Create the nostr:nevent reference to embed the post
+                    const nostrReference = `nostr:${nevent}`;
+
+                    // For better UX, add a brief introduction to the quoted post
+                    let introText = '';
+                    if (content.trim() !== '') {
+                        // If the user added their own text, add a line break after it
+                        introText = '\n\n';
+                    }
+
+                    // Append the nostr reference to the content
+                    content = content + introText + nostrReference;
+
+                    // We don't need to add the actual quoted text content since clients will render
+                    // the embedded post based on the nostr:nevent reference
+                } catch (error) {
+                    console.error("Error processing quote post:", error);
+                    showError(`Failed to create quote post: ${error.message}`);
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = '<span>➤</span> Send';
+                    return; // Exit early if there's an error
+                }
+            }
+
+            // Always add hashtag if in a hashtag channel (regardless of whether it's a reply)
+            if (currentChannel.startsWith('#')) {
+                const tagName = currentChannel.substring(1);
+                tags.push(["t", tagName]); // Add NIP-10 topic tag
+            }
+
+            // Extract hashtags from content and add them as tags
+            const hashtagMatches = content.match(/#(\w+)/g);
+            if (hashtagMatches) {
+                const extractedTags = new Set(); // Use Set to avoid duplicates
+                hashtagMatches.forEach(match => {
+                    const tagName = match.substring(1).toLowerCase(); // Remove # and lowercase
+                    extractedTags.add(tagName);
+                });
+
+                // Add each unique hashtag as a 't' tag
+                extractedTags.forEach(tagName => {
+                    // Check if this tag isn't already added (to avoid duplicates)
+                    const alreadyExists = tags.some(tag => tag[0] === 't' && tag[1] === tagName);
+                    if (!alreadyExists) {
+                        tags.push(["t", tagName]);
+                    }
+                });
+            }
+
+            // TODO: Add reply/mention tags ('e' and 'p') if implementing replies                    // Create the event object after all content manipulation is complete
+            const event = { kind: 1, tags: tags, content: content };
+
+            try {
+                const signedEvent = await signEvent(event);
+                console.log("Publishing event:", signedEvent);
+                broadcast(["EVENT", signedEvent]);
+
+                // Track this post for notifications
+                if (signedEvent.id) {
+                    userPosts.add(signedEvent.id);
+                }
+
+                messageInput.value = ''; // Clear input on successful broadcast attempt
+                autoResizeTextarea(); // Reset textarea height after clearing
+                // Clean up reply metadata if this was a reply
+                if (messageInput.dataset.replyToEvent) {
+                    cancelReply();
+                }
+                // Clean up quote metadata if this was a quote post
+                else if (messageInput.dataset.quoteEvent) {
+                    cancelQuote();
+                }
+                // Optional: Optimistic rendering (might cause duplicates if relay confirms late)
+                // processEvent(signedEvent); // Process immediately for UI update
+                // messageContainer.scrollTop = messageContainer.scrollHeight;
+            } catch (error) {
+                console.error("Failed to sign or broadcast:", error);
+                showError(`Failed to send: ${error.message}`);
+            } finally {
+                 sendBtn.disabled = false; sendBtn.innerHTML = '<i class="lucide lucide-send mr-1"></i> Send';
+                 messageInput.focus();
+            }
+        }
+
+        // --- Subscriptions & Filtering ---
+        function subscribeToFeed() { /* ... (New central subscription logic) ... */
+            console.log(`Subscribing to feed. Channel: ${currentChannel}, Filter: ${currentFilterMode}`);
+            messageContainer.innerHTML = `<div class="text-center text-gray-500 pt-10 loading-messages">Loading ${currentChannel === 'global' ? 'messages' : currentChannel}...</div>`; // Show loading state
+            eventsCache.clear(); // Clear cache for new feed
+
+            let filters = [{
+                kinds: [1], // Text notes
+                limit: 50 // Adjust limit as needed
+            }];
+
+            // Apply channel filter (#hashtag)
+            if (currentChannel.startsWith('#')) {
+                const tagName = currentChannel.substring(1);
+                filters[0]['#t'] = [tagName]; // Filter by NIP-10 topic tag
+            }
+
+            // Apply user filter (following)
+            if (currentFilterMode === 'following') {
+                 if (!authManager.isLoggedIn) {
+                     console.warn("Cannot filter by 'following': User not logged in.");
+                     showError("Login required to view 'Following' feed.");
+                     return;
+                 }
+                 if (authManager.follows.size === 0) {
+                     messageContainer.innerHTML = '<div class="text-center text-gray-500 pt-10">You are not following anyone yet.</div>';
+                     return;
+                 }
+                 filters[0].authors = Array.from(authManager.follows); // Filter by authors users follow
+            }
+
+            // Add Kind 0 filter to fetch profiles for authors in the feed?
+            // This can be noisy. Fetching on demand (in processTextNoteEvent) is often better.
+            // let profileFilter = { kinds: [0], authors: filters[0].authors, limit: 50 }; // Example
+
+            const subId = `main-feed-${generateSubId()}`;
+            subscribe(subId, filters); // Use the central subscribe function
+
+            if (messageContainer.querySelector('.loading-messages')) {
+                messageContainer.querySelector('.loading-messages').remove();
+            }
+        }
+
+        // Fetch a specific event by ID from relays
+        function fetchEvent(eventId, relays = []) {
+            // Skip if already fetching or if we already have it
+            if (eventsCache.has(eventId) || document.getElementById(`loading-event-${eventId}`)) {
+                return;
+            }
+
+            console.log(`Fetching event ${eventId} from relays...`);
+            const subId = `event-${eventId.substring(0, 8)}-${generateSubId()}`;
+
+            // Create filter to fetch the specific event
+            const filters = [{ ids: [eventId] }];
+
+            // Broadcast the request to relays
+            broadcast(["REQ", subId, ...filters]);
+
+            // Auto-close subscription after a reasonable delay
+            setTimeout(() => {
+                broadcast(["CLOSE", subId]);
+
+                // If we still don't have the event, update placeholders
+                if (!eventsCache.has(eventId)) {
+                    // Find all instances of this event's loading placeholders and update them
+                    document.querySelectorAll(`[data-loading-event-id="${eventId}"]`).forEach(placeholder => {
+                        placeholder.innerHTML = `
+                            <div class="bg-[#231b2e] border border-gray-600 rounded-lg p-3 my-2 max-w-md">
+                                <div class="text-gray-400 text-sm">📄 Referenced note</div>
+                                <div class="text-xs text-gray-500 mt-1">nevent: ${eventId.substring(0, 10)}...</div>
+                                <div class="text-xs text-gray-500 mt-1 italic">Could not fetch event from relays</div>
+                            </div>
+                        `;
+                    });
+                }
+            }, 8000); // Allow 8 seconds to get a response
+
+            return subId;
+        }
+
+        // --- Hashtag Channel Management ---
+        // Moved to js/channel-manager.js
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+            connectionStatusContainerHeader.classList.toggle('hidden');
+        }
+
+
+        // --- Settings/Relay Modal ---
+        function openRelayModal() { /* ... (Renamed from openSettingsModal) ... */
+            relayInput.value = relays.join(', '); // Populate with current relays
+            updateRelayListUI(); // Ensure modal list is up-to-date when opened
+            relayManagementModal.classList.remove('hidden');
+        }
+        function closeRelayModal() { /* ... (Renamed from closeSettingsModal) ... */
+            relayManagementModal.classList.add('hidden');
+        }
+        function saveRelays() { /* ... (Renamed from saveSettings) ... */
+            const newRelayUrls = relayInput.value
+                .split(',')
+                .map(url => url.trim())
+                .filter(url => url && (url.startsWith('wss://') || url.startsWith('ws://'))); // Basic validation
+
+            // Allow clearing all relays
+            if (newRelayUrls.length === 0 && relayInput.value.trim() !== '') {
+                 showError("Invalid relay format. Enter valid WebSocket URLs (wss://...) separated by commas, or leave blank to remove all.");
+                 return;
+            }
+
+            if (JSON.stringify(relays) !== JSON.stringify(newRelayUrls)) {
+                 relays = newRelayUrls;
+                 saveRelaysToStorage();
+                 console.log("Relays updated:", relays);
+                 connectToRelays(); // Reconnect to the new set
+             } else {
+                 console.log("Relay list unchanged.");
+             }
+            closeRelayModal();
+        }
+
+
+
+        // --- Utility Functions ---
+        function shortenPubKey(pubkey) { /* ... (no changes needed) ... */
+            if (!pubkey || pubkey.length < 10) return "invalid_key";
+            return `${pubkey.substring(0, 6)}...${pubkey.substring(pubkey.length - 4)}`;
+        }
+        function generateSubId() { /* ... (no changes needed) ... */
+            return `sub-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        }
+        
+        // Expose generateSubId globally for other modules
+        window.generateSubId = generateSubId;
+        function setsAreEqual(setA, setB) { /* ... (New utility) ... */
+            if (setA.size !== setB.size) return false;
+            for (const item of setA) { if (!setB.has(item)) return false; }
+            return true;
+        }
+
+        // --- Enter Behavior Toggle ---
+        function toggleEnterBehavior() {
+            enterBehavior = enterBehavior === 'submit' ? 'newline' : 'submit';
+            localStorage.setItem(STORAGE_KEY_ENTER_BEHAVIOR, enterBehavior);
+            updateEnterToggleText();
+            console.log(`Enter behavior changed to: ${enterBehavior}`);
+        }
+
+        function updateEnterToggleText() {
+            const toggleCheckbox = document.getElementById('enterToggleCheckbox');
+            if (toggleCheckbox) {
+                toggleCheckbox.checked = enterBehavior === 'newline';
+            }
+        }
+
+        // --- Auto-resize Textarea ---
+        function autoResizeTextarea() {
+            const textarea = messageInput;
+            const minHeight = 40; // Match the min-height in CSS
+            const maxHeight = 120; // Match the max-height in CSS
+
+            // Reset height to auto to get the correct scrollHeight
+            textarea.style.height = 'auto';
+
+            // Calculate new height
+            const newHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+
+            // Set the new height
+            textarea.style.height = newHeight + 'px';
+
+            // Enable/disable scrolling based on whether we've hit the max height
+            if (textarea.scrollHeight > maxHeight) {
+                textarea.style.overflowY = 'auto';
+            } else {
+                textarea.style.overflowY = 'hidden';
+            }
+        }
+
+        // --- Notifications ---
+        function subscribeToNotifications() {
+            if (!authManager.isLoggedIn) return;
+
+            console.log("Subscribing to notifications...");
+            unsubscribeFromNotifications(); // Close any existing subscription
+
+            const subId = `notifications-${generateSubId()}`;
+            notificationSubscriptionId = subId;
+
+            // Subscribe to replies and reactions mentioning the user
+            const filters = [
+                // Replies to user's posts (kind 1 events that mention user)
+                {
+                    kinds: [1],
+                    "#p": [authManager.publicKey],
+                    since: lastNotificationCheck
+                },
+                // Reactions to user's posts (kind 7 events that mention user's posts)
+                {
+                    kinds: [7],
+                    "#p": [authManager.publicKey],
+                    since: lastNotificationCheck
+                }
+            ];
+
+            broadcast(["REQ", subId, ...filters]);
+
+            // Update last check time
+            lastNotificationCheck = Math.floor(Date.now() / 1000);
+            localStorage.setItem(STORAGE_KEY_LAST_NOTIFICATION_CHECK, lastNotificationCheck.toString());
+
+            // Set up periodic refresh for new notifications (every 30 seconds)
+            if (window.notificationInterval) {
+                clearInterval(window.notificationInterval);
+            }
+            window.notificationInterval = setInterval(() => {
+                if (authManager.isLoggedIn && notificationSubscriptionId) {
+                    console.log("Refreshing notifications...");
+                    subscribeToNotifications();
+                }
+            }, 30000); // 30 seconds
+        }
+
+        function unsubscribeFromNotifications() {
+            if (notificationSubscriptionId) {
+                broadcast(["CLOSE", notificationSubscriptionId]);
+                notificationSubscriptionId = null;
+            }
+        }
+
+        function fetchUserPosts() {
+            if (!authManager.isLoggedIn) return;
+
+            console.log("Fetching user's recent posts for notification tracking...");
+            const subId = `user-posts-${generateSubId()}`;
+
+            // Fetch recent posts by the user (last 50 posts)
+            const filters = [{
+                kinds: [1],
+                authors: [authManager.publicKey],
+                limit: 50
+            }];
+
+            broadcast(["REQ", subId, ...filters]);
+
+            // Auto-close after a delay
+            setTimeout(() => broadcast(["CLOSE", subId]), 5000);
+        }
+
+        function processNotificationEvent(event) {
+            if (!authManager.isLoggedIn || blockedUsers.has(event.pubkey)) return;
+
+            // Don't create notifications for own events
+            if (event.pubkey === authManager.publicKey) return;
+
+            let notificationType = null;
+            let relatedEventId = null;
+
+            if (event.kind === 1) {
+                // Check if this is a reply to user's post
+                const eTags = event.tags.filter(tag => tag[0] === 'e');
+                const pTags = event.tags.filter(tag => tag[0] === 'p');
+
+                // Check if user is mentioned in p tags
+                const mentionsUser = pTags.some(tag => tag[1] === authManager.publicKey);
+
+                if (mentionsUser && eTags.length > 0) {
+                    // This is likely a reply
+                    notificationType = 'reply';
+                    relatedEventId = eTags[eTags.length - 1][1]; // Last e tag is usually the replied-to event
+                } else if (mentionsUser) {
+                    // This is a mention
+                    notificationType = 'mention';
+                }
+            } else if (event.kind === 7) {
+                // Reaction event
+                const eTags = event.tags.filter(tag => tag[0] === 'e');
+                const pTags = event.tags.filter(tag => tag[0] === 'p');
+
+                if (eTags.length > 0 && pTags.some(tag => tag[1] === authManager.publicKey)) {
+                    notificationType = 'reaction';
+                    relatedEventId = eTags[0][1]; // First e tag is the reacted-to event
+                }
+            }
+
+            if (notificationType) {
+                addNotification({
+                    id: event.id,
+                    type: notificationType,
+                    authorPubkey: event.pubkey,
+                    content: event.content,
+                    timestamp: event.created_at,
+                    relatedEventId: relatedEventId,
+                    read: false
+                });
+            }
+        }
+
+        function addNotification(notification) {
+            // Check if we already have this notification
+            if (notifications.some(n => n.id === notification.id)) return;
+
+            // Add to the beginning of the array (newest first)
+            notifications.unshift(notification);
+
+            // Keep only the latest 100 notifications
+            if (notifications.length > 100) {
+                notifications = notifications.slice(0, 100);
+            }
+
+            // Save to storage
+            localStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(notifications));
+
+            // Update UI
+            updateNotificationsUI();
+
+            console.log(`New ${notification.type} notification from ${shortenPubKey(notification.authorPubkey)}`);
+        }
+
+        function updateNotificationsUI() {
+            const unreadCount = notifications.filter(n => !n.read).length;
+
+            // Update badge
+            if (unreadCount > 0) {
+                notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount.toString();
+                notificationBadge.classList.remove('hidden');
+            } else {
+                notificationBadge.classList.add('hidden');
+            }
+
+            // Update notifications list
+            if (notifications.length === 0) {
+                notificationsList.innerHTML = '<div class="p-4 text-center text-gray-500 text-sm">No notifications yet</div>';
+                return;
+            }
+
+            const notificationsHTML = notifications.map(notification => {
+                const profile = window.profileUtils ? window.profileUtils.getProfile(notification.authorPubkey) : { name: shortenPubKey(notification.authorPubkey), picture: null, hasValidPicture: false };
+                const timeAgo = formatTimeAgo(notification.timestamp);
+                const unreadClass = notification.read ? '' : 'unread';
+
+                let typeIcon = '';
+                let typeText = '';
+                let contentPreview = '';
+
+                switch (notification.type) {
+                    case 'reply':
+                        typeIcon = '💬';
+                        typeText = 'replied to your post';
+                        contentPreview = notification.content.length > 80 ?
+                            notification.content.substring(0, 80) + '...' :
+                            notification.content;
+                        break;
+                    case 'mention':
+                        typeIcon = '👤';
+                        typeText = 'mentioned you';
+                        contentPreview = notification.content.length > 80 ?
+                            notification.content.substring(0, 80) + '...' :
+                            notification.content;
+                        break;
+                    case 'reaction':
+                        typeIcon = '❤️';
+                        typeText = 'reacted to your post';
+                        contentPreview = notification.content || '❤️';
+                        break;
+                }
+
+                // Generate avatar HTML based on whether user has valid picture
+                const avatarHTML = profile.hasValidPicture
+                    ? `<img src="${profile.picture}" alt="" class="w-8 h-8 rounded-full object-cover"
+                           onerror="this.style.display='none'">`
+                    : `<div class="w-8 h-8 rounded-full profile-placeholder-small flex items-center justify-center text-sm font-bold">
+                           ${notification.authorPubkey.substring(0, 2).toUpperCase()}
+                       </div>`;
+
+                return `
+                    <div class="notification-item ${unreadClass}" onclick="handleNotificationClick('${notification.id}', '${notification.relatedEventId || notification.id}')">
+                        <div class="flex items-start space-x-3">
+                            ${avatarHTML}
+                            <div class="flex-1 min-w-0">
+                                <div class="notification-content">
+                                    <span class="notification-author">${profile.name}</span>
+                                    <span class="text-gray-300"> ${typeText}</span>
+                                    <span class="text-xl ml-2">${typeIcon}</span>
+                                </div>
+                                ${contentPreview ? `<div class="text-gray-400 text-xs mt-1">"${sanitizeHTML(contentPreview)}"</div>` : ''}
+                                <div class="notification-time">${timeAgo}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            notificationsList.innerHTML = notificationsHTML;
+        }
+
+        function handleNotificationClick(notificationId, eventId) {
+            // Mark notification as read
+            markNotificationRead(notificationId);
+
+            // Get the notification to check its type
+            const notification = notifications.find(n => n.id === notificationId);
+
+            // For replies and mentions, show the post in a modal
+            if (notification && (notification.type === 'reply' || notification.type === 'mention')) {
+                showPostModal(notification);
+                return;
+            }
+
+            // For reactions or other types, try to find and scroll to the related event in the current feed
+            const eventElement = document.getElementById(`note-${eventId}`);
+            if (eventElement) {
+                eventElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                eventElement.style.background = 'rgba(145, 71, 255, 0.2)';
+                setTimeout(() => {
+                    eventElement.style.background = '';
+                }, 2000);
+            }
+        }
+
+        function markNotificationRead(notificationId) {
+            const notification = notifications.find(n => n.id === notificationId);
+            if (notification && !notification.read) {
+                notification.read = true;
+                localStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(notifications));
+                updateNotificationsUI();
+            }
+        }
+
+        function markAllNotificationsRead() {
+            notifications.forEach(n => n.read = true);
+            localStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(notifications));
+            updateNotificationsUI();
+        }
+
+        function formatTimeAgo(timestamp) {
+            const now = Math.floor(Date.now() / 1000);
+            const diff = now - timestamp;
+
+            if (diff < 60) return 'now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+            if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+            return `${Math.floor(diff / 604800)}w`;
+        }
+
+        function showPostModal(notification) {
+            // Show the modal
+            postModal.classList.remove('hidden');
+
+            // Get the profile of the author
+            const profile = window.profileUtils ? window.profileUtils.getProfile(notification.authorPubkey) : { name: shortenPubKey(notification.authorPubkey), picture: null, hasValidPicture: false };
+
+            // Format the notification content for display
+            const timestamp = new Date(notification.timestamp * 1000);
+            const formattedTime = timestamp.toLocaleString();
+
+            // Determine notification type display
+            let typeIcon = '';
+            let typeText = '';
+
+            switch (notification.type) {
+                case 'reply':
+                    typeIcon = '💬';
+                    typeText = 'replied to your post';
+                    break;
+                case 'mention':
+                    typeIcon = '👤';
+                    typeText = 'mentioned you';
+                    break;
+            }
+
+            // Create the post content HTML
+            const postHTML = `
+                <div class="bg-[#1a0d27] rounded-lg p-4 border border-gray-600">
+                    <div class="flex items-start space-x-3 mb-3">
+                        ${profile.hasValidPicture && profile.picture ? 
+                            `<img src="${profile.picture}" alt="${profile.name}" class="w-10 h-10 rounded-full object-cover" onerror="this.style.display='none';">` :
+                            `<div class="w-10 h-10 rounded-full bg-[#9147ff] flex items-center justify-center text-white font-bold text-sm">${notification.authorPubkey.substring(0, 2).toUpperCase()}</div>`
+                        }
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-semibold text-white cursor-pointer hover:underline"
+                                      onclick="profileManager.openProfile('${notification.authorPubkey}')"
+                                      title="View ${profile.name}'s profile">${profile.name}</span>
+                                <span class="text-xl">${typeIcon}</span>
+                                <span class="text-gray-400 text-sm">${typeText}</span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">${formattedTime}</div>
+                        </div>
+                    </div>
+
+                    <div class="text-gray-200 break-words">
+                        ${formatContent(sanitizeHTML(notification.content))}
+                    </div>
+
+                    <div class="mt-3 flex space-x-2">
+                        <button class="text-gray-400 hover:text-blue-400 text-sm"
+                                onclick="replyToMessage('${notification.id}', '${notification.authorPubkey}'); closePostModalFunc();">
+                            Reply
+                        </button>
+                        <button class="text-gray-400 hover:text-purple-400 text-sm"
+                                onclick="quotePost('${notification.id}', '${notification.authorPubkey}', '${encodeURIComponent(notification.content)}'); closePostModalFunc();">
+                            Quote
+                        </button>
+                        <button class="text-gray-400 hover:text-red-400 text-sm"
+                                onclick="showEmojiPicker('${notification.id}', '${notification.authorPubkey}'); closePostModalFunc();">
+                            React
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            postModalContent.innerHTML = postHTML;
+        }
+
+        function closePostModalFunc() {
+            postModal.classList.add('hidden');
+        }
+
+    </script>
+</body>
+</html>
